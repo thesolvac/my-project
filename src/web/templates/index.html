@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+
+{% block content %}
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<div class="apme-hero rounded-3 p-4 p-md-5 mb-4 text-white">
+  <div class="row align-items-center">
+    <div class="col-md-8">
+      <h1 class="display-6 fw-bold mb-1">
+        <i class="bi bi-search-heart me-2"></i>Adaptive Pattern Matching
+      </h1>
+      <p class="lead mb-0 opacity-75">
+        KMP · Boyer-Moore · Rabin-Karp · Shift-Or · Aho-Corasick · Fuzzy — the engine picks the fastest one for your data.
+      </p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <span class="badge bg-light text-dark fs-6 p-2">
+        <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Search form ────────────────────────────────────────────────────────── -->
+<div class="card shadow-sm border-0">
+  <div class="card-body p-4">
+    <form id="searchForm" method="POST" action="{{ url_for('search.run_search') }}"
+          enctype="multipart/form-data" novalidate>
+
+      <!-- ── Input mode tabs ─────────────────────────────────────────────── -->
+      <ul class="nav nav-pills mb-4" id="inputTabs">
+        <li class="nav-item">
+          <button class="nav-link active" type="button" id="tab-text"
+                  onclick="switchTab('text')">
+            <i class="bi bi-keyboard me-1"></i>Direct Text
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" type="button" id="tab-file"
+                  onclick="switchTab('file')">
+            <i class="bi bi-file-earmark-text me-1"></i>Upload File
+          </button>
+        </li>
+      </ul>
+
+      <!-- ── Text input pane ─────────────────────────────────────────────── -->
+      <div id="pane-text">
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="text_input">Text to Search</label>
+          <textarea id="text_input" name="text_input" class="form-control font-monospace"
+                    rows="8" placeholder="Paste your text here..."></textarea>
+          <div class="form-text" id="charCount">0 characters</div>
+        </div>
+      </div>
+
+      <!-- ── File upload pane ────────────────────────────────────────────── -->
+      <div id="pane-file" class="d-none">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Upload File</label>
+          <div class="upload-zone border rounded-3 p-4 text-center" id="dropZone">
+            <i class="bi bi-cloud-arrow-up display-5 text-muted"></i>
+            <p class="mt-2 mb-1 text-muted">Drag & drop a file here, or click to browse</p>
+            <p class="text-muted small">Supported: .txt .log .csv .md .json .xml .py .js (max 50 MB)</p>
+            <input type="file" id="file" name="file" class="d-none"
+                   accept=".txt,.log,.csv,.md,.json,.xml,.py,.js,.html"/>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2"
+                    onclick="document.getElementById('file').click()">
+              <i class="bi bi-folder2-open me-1"></i>Browse Files
+            </button>
+          </div>
+          <div id="filePreview" class="mt-2 d-none">
+            <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-0">
+              <i class="bi bi-file-earmark-check fs-5"></i>
+              <span id="fileName">—</span>
+              <button type="button" class="btn-close ms-auto" onclick="clearFile()"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4"/>
+
+      <!-- ── Pattern & algorithm row ────────────────────────────────────── -->
+      <div class="row g-3 align-items-end">
+
+        <!-- Pattern -->
+        <div class="col-md-5">
+          <label class="form-label fw-semibold" for="pattern">
+            Search Pattern <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-regex"></i></span>
+            <input type="text" id="pattern" name="pattern" class="form-control"
+                   placeholder="e.g.  error 404" required/>
+          </div>
+        </div>
+
+        <!-- Mode -->
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Selection Mode</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="mode"
+                     id="modeAuto" value="auto" checked
+                     onchange="toggleAlgoSelect()"/>
+              <label class="form-check-label" for="modeAuto">
+                <i class="bi bi-cpu me-1"></i>Auto
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="mode"
+                     id="modeManual" value="manual"
+                     onchange="toggleAlgoSelect()"/>
+              <label class="form-check-label" for="modeManual">
+                <i class="bi bi-hand-index me-1"></i>Manual
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Algorithm picker (visible only in manual mode) -->
+        <div class="col-md-4" id="algoPickerWrapper" style="display:none !important">
+          <label class="form-label fw-semibold" for="algorithm">Algorithm</label>
+          <select id="algorithm" name="algorithm" class="form-select"
+                  onchange="toggleFuzzyOpts()">
+            <option value="kmp">KMP – Knuth-Morris-Pratt</option>
+            <option value="boyer_moore">Boyer-Moore</option>
+            <option value="rabin_karp">Rabin-Karp</option>
+            <option value="shift_or">Shift-Or (Bitap)</option>
+            <option value="aho_corasick">Aho-Corasick</option>
+            <option value="fuzzy">Fuzzy (Approximate)</option>
+          </select>
+        </div>
+
+        <!-- Max errors input (visible only when Fuzzy is selected) -->
+        <div class="col-md-2" id="fuzzyOptsWrapper" style="display:none !important">
+          <label class="form-label fw-semibold" for="max_errors">Max Errors</label>
+          <input type="number" id="max_errors" name="max_errors"
+                 class="form-control" value="1" min="0" max="5"/>
+          <div class="form-text">Edit distance (0–5)</div>
+        </div>
+
+      </div>
+
+      <!-- ── Submit ──────────────────────────────────────────────────────── -->
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4 fw-semibold" id="searchBtn">
+          <i class="bi bi-search me-2"></i>Search
+        </button>
+        <button type="reset" class="btn btn-outline-secondary" onclick="clearAll()">
+          <i class="bi bi-x-circle me-1"></i>Clear
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ── Algorithm quick-reference ─────────────────────────────────────────── -->
+<div class="row g-3 mt-3">
+  {% set algos = [
+    ('bi-lightning-charge-fill', 'text-warning',   'KMP',          'O(n+m)',    'Guaranteed linear time. Best for small alphabets and repetitive text.'),
+    ('bi-skip-forward-fill',     'text-success',   'Boyer-Moore',  'O(n/m)',    'Sub-linear best case. Fastest for natural language with long patterns.'),
+    ('bi-hash',                  'text-info',      'Rabin-Karp',   'O(n+m)',    'Rolling hash. Ideal for multiple patterns or very short searches.'),
+    ('bi-toggles',               'text-primary',   'Shift-Or',     'O(n)',      'Bit-parallel NFA. O(n) exact search for patterns up to 64 bytes.'),
+    ('bi-diagram-3-fill',        'text-danger',    'Aho-Corasick', 'O(n)',      'Complete DFA over all patterns. Optimal for multi-pattern search.'),
+    ('bi-search-heart-fill',     'text-secondary', 'Fuzzy',        'O(n·k)',    'Wu-Manber k-error Bitap. Finds approximate matches within edit distance k.'),
+  ] %}
+  {% for icon, color, name, complexity, desc in algos %}
+  <div class="col-md-4">
+    <div class="card border-0 bg-white shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i class="bi {{ icon }} {{ color }} fs-4"></i>
+          <h6 class="fw-bold mb-0">{{ name }}</h6>
+          <code class="ms-auto text-muted small">{{ complexity }}</code>
+        </div>
+        <p class="text-muted small mb-0">{{ desc }}</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isFile = tab === 'file';
+  document.getElementById('pane-text').classList.toggle('d-none', isFile);
+  document.getElementById('pane-file').classList.toggle('d-none', !isFile);
+  document.getElementById('tab-text').classList.toggle('active', !isFile);
+  document.getElementById('tab-file').classList.toggle('active', isFile);
+  if (!isFile) document.getElementById('file').value = '';
+}
+
+// ── Manual / Auto mode toggle ──────────────────────────────────────────────
+function toggleAlgoSelect() {
+  const manual = document.getElementById('modeManual').checked;
+  document.getElementById('algoPickerWrapper').style.setProperty(
+    'display', manual ? 'block' : 'none', 'important'
+  );
+  if (!manual) {
+    document.getElementById('fuzzyOptsWrapper').style.setProperty('display', 'none', 'important');
+  } else {
+    toggleFuzzyOpts();
+  }
+}
+
+function toggleFuzzyOpts() {
+  const algo = document.getElementById('algorithm').value;
+  document.getElementById('fuzzyOptsWrapper').style.setProperty(
+    'display', algo === 'fuzzy' ? 'block' : 'none', 'important'
+  );
+}
+
+// ── Live character counter ─────────────────────────────────────────────────
+document.getElementById('text_input').addEventListener('input', function() {
+  document.getElementById('charCount').textContent =
+    this.value.length.toLocaleString() + ' characters';
+});
+
+// ── File upload & drop zone ────────────────────────────────────────────────
+const fileInput = document.getElementById('file');
+const dropZone  = document.getElementById('dropZone');
+
+fileInput.addEventListener('change', showFile);
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    showFile();
+  }
+});
+
+function showFile() {
+  const f = fileInput.files[0];
+  if (!f) return;
+  document.getElementById('fileName').textContent =
+    f.name + '  (' + (f.size / 1024).toFixed(1) + ' KB)';
+  document.getElementById('filePreview').classList.remove('d-none');
+}
+
+function clearFile() {
+  fileInput.value = '';
+  document.getElementById('filePreview').classList.add('d-none');
+}
+
+function clearAll() {
+  document.getElementById('text_input').value = '';
+  document.getElementById('charCount').textContent = '0 characters';
+  clearFile();
+}
+
+// ── Form submit guard ──────────────────────────────────────────────────────
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+  const pattern = document.getElementById('pattern').value.trim();
+  const text    = document.getElementById('text_input').value.trim();
+  const hasFile = fileInput.files.length > 0;
+  if (!pattern)            { e.preventDefault(); alert('Please enter a search pattern.'); return; }
+  if (!text && !hasFile)   { e.preventDefault(); alert('Please enter text or upload a file.'); return; }
+  document.getElementById('searchBtn').innerHTML =
+    '<span class="spinner-border spinner-border-sm me-2"></span>Searching…';
+  document.getElementById('searchBtn').disabled = true;
+});
+</script>
+{% endblock %}
