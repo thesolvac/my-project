@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+
+{% block content %}
+
+<!-- ── Summary bar ───────────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">
+      {% if result.match_count > 0 %}
+        <i class="bi bi-check-circle-fill me-2" style="color:var(--coral)"></i>
+        {{ result.match_count }} match{{ 'es' if result.match_count != 1 }} found
+      {% else %}
+        <i class="bi bi-x-circle-fill me-2" style="color:var(--lblue)"></i>
+        No matches found
+      {% endif %}
+    </h4>
+    <small style="color:#7a8fa8">
+      Pattern: <code>{{ result.pattern }}</code>
+      &nbsp;·&nbsp; Source: {{ source }}
+    </small>
+  </div>
+  <a href="{{ url_for('search.index') }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>New Search
+  </a>
+</div>
+
+<!-- ── Warnings ──────────────────────────────────────────────────────────── -->
+{% if result.warnings %}
+  {% for w in result.warnings %}
+    <div class="alert alert-warning d-flex align-items-start gap-2 py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+      <span class="small">{{ w }}</span>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<!-- ── Metric cards ───────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Algorithm -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100 apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Algorithm Used</div>
+        <div class="metric-value" style="font-size:1.25rem">{{ result.algorithm_display }}</div>
+        <div class="metric-badge">
+          <span class="badge badge-algo badge-{{ result.algorithm | replace('_', '-') }}">
+            {{ result.algorithm | upper | replace('_', '-') }}
+          </span>
+          &nbsp;
+          <span class="badge badge-{{ result.mode }}-mode" style="font-size:.62rem">
+            {{ result.mode | upper }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100 apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Search Time</div>
+        <div class="metric-value">{{ result.duration_ms }}<span style="font-size:.9rem;font-weight:500;color:#7a8fa8"> ms</span></div>
+        <div class="metric-sub">{{ result.throughput_mbs }} MB/s throughput</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Text size -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100 apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Text Size</div>
+        <div class="metric-value">
+          {% if result.text_size_bytes >= 1048576 %}
+            {{ (result.text_size_bytes / 1048576) | round(2) }}<span style="font-size:.9rem;font-weight:500;color:#7a8fa8"> MB</span>
+          {% elif result.text_size_bytes >= 1024 %}
+            {{ (result.text_size_bytes / 1024) | round(1) }}<span style="font-size:.9rem;font-weight:500;color:#7a8fa8"> KB</span>
+          {% else %}
+            {{ result.text_size_bytes }}<span style="font-size:.9rem;font-weight:500;color:#7a8fa8"> B</span>
+          {% endif %}
+        </div>
+        <div class="metric-sub">{{ result.pattern_length }}-char pattern</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matches -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100 apme-metric" style="border-top-color:{% if result.match_count > 0 %}var(--coral){% else %}var(--lblue){% endif %} !important">
+      <div class="card-body">
+        <div class="metric-label">Matches</div>
+        <div class="metric-value" style="color:{% if result.match_count > 0 %}var(--coral){% else %}var(--lblue){% endif %}">
+          {{ result.match_count }}
+        </div>
+        {% if result.match_count > 500 %}
+          <div class="metric-sub">Showing first 500</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Selection reasoning ────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4 apme-reasoning">
+  <div class="card-body py-3">
+    <h6 class="fw-bold mb-2 text-mblue">
+      <i class="bi bi-cpu me-2" style="color:var(--coral)"></i>APME Selection Reasoning
+    </h6>
+    <p class="mb-0 small" style="color:#4a5e78;line-height:1.65">{{ result.justification }}</p>
+  </div>
+</div>
+
+<!-- ── Complexity table ───────────────────────────────────────────────────── -->
+{% if result.complexity %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-table text-mblue"></i>
+    <span>Complexity Analysis</span>
+    <span class="badge badge-algo badge-{{ result.algorithm | replace('_','-') }} ms-1">
+      {{ result.algorithm_display }}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Case</th><th>Time Complexity</th>
+        </tr>
+      </thead>
+      <tbody class="font-monospace" style="font-size:.82rem">
+        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Best</td>   <td>{{ result.complexity.get('time_best',    '—') }}</td></tr>
+        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Average</td><td>{{ result.complexity.get('time_average', '—') }}</td></tr>
+        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Worst</td>  <td>{{ result.complexity.get('time_worst',   '—') }}</td></tr>
+        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Space</td>  <td>{{ result.complexity.get('space',        '—') }}</td></tr>
+      </tbody>
+    </table>
+    {% if result.complexity.get('note') %}
+      <p class="small px-3 py-2 mb-0" style="color:#7a8fa8;border-top:1px solid rgba(152,193,217,.2)">
+        <i class="bi bi-info-circle me-1 text-mblue"></i>{{ result.complexity.note }}
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Algorithm Comparison ───────────────────────────────────────────────── -->
+{% if result.text_snippet %}
+<div class="card shadow-sm mb-4" id="compareCard">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>
+      <i class="bi bi-bar-chart-line me-2 text-mblue"></i>Algorithm Comparison
+    </span>
+    <button class="btn btn-sm btn-outline-primary" id="compareBtn"
+            onclick="runComparison()">
+      <i class="bi bi-play-fill me-1"></i>Run Benchmark
+    </button>
+  </div>
+  <div class="card-body" id="compareBody" style="display:none">
+    <canvas id="compareChart" height="100"></canvas>
+    <div id="compareTable" class="mt-4"></div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Match list ─────────────────────────────────────────────────────────── -->
+{% if result.matches %}
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-list-check text-mblue"></i>
+    <span>Match List</span>
+    <span class="badge ms-1" style="background:var(--coral);color:#fff">{{ result.match_count }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="match-list">
+      {% for m in result.matches %}
+      <div class="match-item px-4 py-3 border-bottom">
+        <div class="d-flex align-items-center gap-3 mb-1">
+          <span class="badge" style="background:rgba(61,90,128,.12);color:var(--blue);font-size:.67rem">
+            #{{ loop.index }}
+          </span>
+          <small style="color:#7a8fa8">
+            Position <code>{{ m.position }}</code>
+            &nbsp;·&nbsp; Line <code>{{ m.line_number }}</code>
+          </small>
+        </div>
+        <div class="font-monospace text-break context-line" style="color:#4a5e78">
+          <span style="opacity:.6">{{ m.context_before }}</span><span class="match-highlight">{{ m.snippet }}</span><span style="opacity:.6">{{ m.context_after }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% elif not result.warnings %}
+<div class="text-center py-5" style="color:#7a8fa8">
+  <i class="bi bi-search display-3 d-block mb-3" style="opacity:.18;color:var(--lblue)"></i>
+  <p class="fs-5 mb-3">No occurrences of <code>{{ result.pattern }}</code> were found.</p>
+  <a href="{{ url_for('search.index') }}" class="btn btn-primary">
+    <i class="bi bi-arrow-left me-1"></i>Try a different pattern
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TEXT_SNIPPET = {{ result.text_snippet | tojson }};
+const PATTERN      = {{ result.pattern      | tojson }};
+let compareChart   = null;
+
+// Algorithm colours aligned with the new palette
+const ALGO_COLORS = {
+  kmp:          '#3D5A80',
+  boyer_moore:  '#EE6C4D',
+  rabin_karp:   '#98C1D9',
+  shift_or:     '#293241',
+  aho_corasick: '#5b7fa3',
+  fuzzy:        '#f0956a',
+};
+
+async function runComparison() {
+  const btn = document.getElementById('compareBtn');
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running…';
+  btn.disabled  = true;
+
+  try {
+    const resp = await fetch('{{ url_for("search.compare") }}', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ text: TEXT_SNIPPET, pattern: PATTERN }),
+    });
+    const data = await resp.json();
+    if (data.error) { alert(data.error); return; }
+    renderComparison(data);
+    document.getElementById('compareBody').style.display = 'block';
+  } catch (e) {
+    alert('Comparison failed: ' + e.message);
+  } finally {
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Re-run';
+    btn.disabled  = false;
+  }
+}
+
+function renderComparison(data) {
+  const keys   = Object.keys(data);
+  const labels = keys.map(k => data[k].display_name);
+  const times  = keys.map(k => data[k].duration_ms);
+  const colors = keys.map(k => ALGO_COLORS[k] || '#98C1D9');
+
+  if (compareChart) compareChart.destroy();
+  compareChart = new Chart(document.getElementById('compareChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Execution Time (ms)',
+        data:  times,
+        backgroundColor: colors.map(c => c + 'cc'),
+        borderColor:     colors,
+        borderWidth:     2,
+        borderRadius:    6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Time (ms)', color: '#7a8fa8' },
+          grid:  { color: 'rgba(152,193,217,.2)' },
+          ticks: { color: '#7a8fa8' },
+        },
+        x: {
+          grid:  { display: false },
+          ticks: { color: '#293241', font: { weight: '600' } },
+        }
+      }
+    }
+  });
+
+  // Comparison table
+  let html = `<table class="table table-sm mb-0">
+    <thead><tr>
+      <th>Algorithm</th><th>Time (ms)</th><th>Matches</th><th>Best Complexity</th>
+    </tr></thead><tbody>`;
+  for (const [algo, d] of Object.entries(data)) {
+    const cls = algo.replace('_', '-');
+    html += `<tr>
+      <td><span class="badge badge-algo badge-${cls}">${d.display_name}</span></td>
+      <td class="font-monospace">${d.duration_ms}</td>
+      <td>${d.match_count}</td>
+      <td><code>${d.complexity.time_best || '—'}</code></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('compareTable').innerHTML = html;
+}
+</script>
+{% endblock %}

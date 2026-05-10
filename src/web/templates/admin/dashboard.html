@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-speedometer2 me-2" style="color:var(--coral)"></i>Admin Dashboard
+  </h4>
+  <span class="badge badge-admin-role px-3 py-2">
+    <i class="bi bi-shield-fill me-1"></i>Admin
+  </span>
+</div>
+
+<!-- ── Summary cards ──────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Total Searches</div>
+        <div class="metric-value" style="color:var(--coral)">{{ total_searches }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Registered Users</div>
+        <div class="metric-value" style="color:var(--blue)">{{ total_users }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% for p in perf_stats %}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Avg {{ p._id | upper | replace('_',' ') }} Time</div>
+        <div class="metric-value">{{ p.avg_ms }}<span style="font-size:.9rem;font-weight:500;color:#7a8fa8"> ms</span></div>
+        <div class="metric-sub">{{ p.total }} searches</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+<!-- ── Charts ─────────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-md-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <i class="bi bi-pie-chart me-2 text-mblue"></i>Algorithm Usage
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="usageChart" style="max-height:260px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart me-2 text-mblue"></i>Average Execution Time per Algorithm (ms)
+      </div>
+      <div class="card-body">
+        <canvas id="perfChart" style="max-height:260px"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Performance table ──────────────────────────────────────────────────── -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <i class="bi bi-table me-2 text-mblue"></i>Performance Summary
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Algorithm</th><th>Searches</th>
+          <th>Avg Time (ms)</th><th>Avg Throughput (MB/s)</th><th>Avg Matches</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in perf_stats %}
+        <tr>
+          <td>
+            <span class="badge badge-algo badge-{{ p._id | replace('_','-') }}">
+              {{ p._id | replace('_',' ') | title }}
+            </span>
+          </td>
+          <td>{{ p.total }}</td>
+          <td class="font-monospace small">{{ p.avg_ms }}</td>
+          <td class="font-monospace small">{{ p.avg_mbs }}</td>
+          <td>{{ p.avg_match }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Recent searches ────────────────────────────────────────────────────── -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <i class="bi bi-clock-history me-2 text-mblue"></i>Recent Searches (all users)
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>User</th><th>Pattern</th><th>Algorithm</th>
+          <th>Matches</th><th>Time (ms)</th><th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in recent %}
+        <tr>
+          <td class="fw-semibold small" style="color:var(--navy)">{{ s.username }}</td>
+          <td><code>{{ s.pattern }}</code></td>
+          <td>
+            <span class="badge badge-algo badge-{{ s.algorithm | replace('_','-') }}">
+              {{ s.algorithm | replace('_',' ') | title }}
+            </span>
+          </td>
+          <td>
+            <span style="color:{% if s.match_count > 0 %}var(--coral){% else %}#7a8fa8{% endif %};font-weight:600">
+              {{ s.match_count }}
+            </span>
+          </td>
+          <td class="font-monospace small" style="color:#4a5e78">{{ s.duration_ms }}</td>
+          <td class="small" style="color:#7a8fa8">
+            {{ s.timestamp.strftime('%m-%d %H:%M') if s.timestamp else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Top users ──────────────────────────────────────────────────────────── -->
+<div class="card shadow-sm">
+  <div class="card-header">
+    <i class="bi bi-people me-2 text-mblue"></i>Top Users by Search Count
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Rank</th><th>Username</th><th>Email</th>
+          <th>Role</th><th>Searches</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in top_users %}
+        <tr>
+          <td class="small" style="color:#7a8fa8">{{ loop.index }}</td>
+          <td class="fw-semibold" style="color:var(--navy)">{{ u.username }}</td>
+          <td class="small" style="color:#7a8fa8">{{ u.email }}</td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge badge-admin-role">Admin</span>
+            {% else %}
+              <span class="badge badge-user-role">User</span>
+            {% endif %}
+          </td>
+          <td>
+            <span style="font-weight:600;color:{% if u.search_count %}var(--blue){% else %}#7a8fa8{% endif %}">
+              {{ u.search_count or 0 }}
+            </span>
+          </td>
+          <td>
+            {% if u.role != 'admin' %}
+              <a href="{{ url_for('admin.promote', user_id=u._id) }}"
+                 class="btn btn-xs btn-outline-warning btn-sm"
+                 onclick="return confirm('Promote {{ u.username }} to admin?')">
+                <i class="bi bi-arrow-up-circle me-1"></i>Promote
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const algoStats = {{ algo_stats | tojson }};
+const perfStats = {{ perf_stats | tojson }};
+
+// Palette-aligned colours for all 6 algorithms
+const ALGO_COLORS = {
+  kmp:          '#3D5A80',
+  boyer_moore:  '#EE6C4D',
+  rabin_karp:   '#98C1D9',
+  shift_or:     '#293241',
+  aho_corasick: '#5b7fa3',
+  fuzzy:        '#f0956a',
+};
+const DEFAULT_COLOR = '#98C1D9';
+
+function algoColor(id) { return ALGO_COLORS[id] || DEFAULT_COLOR; }
+
+// Chart defaults
+Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+Chart.defaults.color = '#7a8fa8';
+
+// Usage doughnut
+new Chart(document.getElementById('usageChart'), {
+  type: 'doughnut',
+  data: {
+    labels: algoStats.map(d => d._id.replace('_', '-')),
+    datasets: [{
+      data: algoStats.map(d => d.count),
+      backgroundColor: algoStats.map(d => algoColor(d._id) + 'cc'),
+      borderColor:     algoStats.map(d => algoColor(d._id)),
+      borderWidth: 2,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { padding: 16, boxWidth: 12, borderRadius: 4 }
+      }
+    },
+    cutout: '62%',
+  }
+});
+
+// Avg time bar chart
+new Chart(document.getElementById('perfChart'), {
+  type: 'bar',
+  data: {
+    labels: perfStats.map(d => d._id.replace('_', '-')),
+    datasets: [{
+      label: 'Avg Time (ms)',
+      data:  perfStats.map(d => d.avg_ms),
+      backgroundColor: perfStats.map(d => algoColor(d._id) + 'b0'),
+      borderColor:     perfStats.map(d => algoColor(d._id)),
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid:  { color: 'rgba(152,193,217,.2)' },
+        ticks: { color: '#7a8fa8' },
+      },
+      x: {
+        grid:  { display: false },
+        ticks: { color: '#293241', font: { weight: '600' } },
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

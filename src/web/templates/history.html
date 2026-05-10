@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Search History{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-clock-history me-2" style="color:var(--coral)"></i>Recent Searches
+  </h4>
+  <a href="{{ url_for('search.index') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-search me-1"></i>New Search
+  </a>
+</div>
+
+{% if searches %}
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Pattern</th>
+          <th>Algorithm</th>
+          <th>Source</th>
+          <th>Matches</th>
+          <th>Time (ms)</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in searches %}
+        <tr>
+          <td class="small" style="color:#7a8fa8">{{ loop.index }}</td>
+          <td>
+            <code>{{ s.pattern }}</code>
+            {% if s.mode == 'manual' %}
+              <span class="badge badge-manual-mode ms-1" style="font-size:.6rem">manual</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge badge-algo badge-{{ s.get('algorithm', '') | replace('_', '-') }}">
+              {{ s.get('algorithm_display', s.get('algorithm', '—')) }}
+            </span>
+          </td>
+          <td class="small" style="color:#7a8fa8;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ s.source }}
+          </td>
+          <td>
+            <span class="fw-semibold" style="color:{% if s.match_count > 0 %}var(--coral){% else %}#7a8fa8{% endif %}">
+              {{ s.match_count }}
+            </span>
+          </td>
+          <td class="font-monospace small" style="color:#4a5e78">{{ s.duration_ms }}</td>
+          <td class="small" style="color:#7a8fa8">
+            {{ s.timestamp.strftime('%Y-%m-%d %H:%M') if s.timestamp else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-clock display-3 d-block mb-3" style="opacity:.15;color:var(--lblue)"></i>
+  <p class="mb-3" style="color:#7a8fa8">No searches yet.</p>
+  <a href="{{ url_for('search.index') }}" class="btn btn-primary">
+    <i class="bi bi-search me-2"></i>Run your first search
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
