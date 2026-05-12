@@ -1,0 +1,62 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+pip-wheel-metadata/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ── Environment / secrets ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.secret
+
+# ── C compiled artifacts ───────────────────────────────────────────────────────
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+
+# ── Uploads / user data ────────────────────────────────────────────────────────
+src/web/uploads/
+
+# ── IDE & editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── OS junk ───────────────────────────────────────────────────────────────────
+desktop.ini
+ehthumbs.db
+
+# ── Node (if ever added) ──────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Claude Code internal ──────────────────────────────────────────────────────
+.claude/

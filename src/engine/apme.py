@@ -16,7 +16,7 @@ Public API
 
     # In-memory search
     result = engine.search(text, pattern)
-    result = engine.search(text, pattern, mode="manual", algorithm="kmp")
+    result = engine.search(text, pattern, mode="manual", algorithm="flow_scan")
 
     # File search with streaming
     result = engine.search_file("/path/to/large.log", pattern)
@@ -61,7 +61,7 @@ class SearchResult:
     match_count:     int
 
     # ── Algorithm metadata ──────────────────────────────────────────
-    algorithm:       str          # "kmp" | "boyer_moore" | "rabin_karp"
+    algorithm:       str          # "flow_scan" | "skip_stride" | "twin_hash" | "bit_anchor" | "web_scan" | "tier_match"
     algorithm_display: str        # human-readable name
     justification:   str          # why this algorithm was selected
     complexity:      dict         # Big-O table
@@ -135,10 +135,10 @@ class APMEEngine:
             mode:         "auto"   – heuristic selects the algorithm.
                           "manual" – use the *algorithm* argument.
             algorithm:    Explicit algorithm name (only when mode=="manual").
-                          One of: "kmp", "boyer_moore", "rabin_karp",
-                                  "shift_or", "aho_corasick", "fuzzy".
+                          One of: "flow_scan", "skip_stride", "twin_hash",
+                                  "bit_anchor", "web_scan", "tier_match".
             num_patterns: Hint that multiple patterns will be searched.
-                          A value > 1 biases selection toward Aho-Corasick.
+                          A value > 1 biases selection toward WebScan.
             max_errors:   Maximum edit distance for fuzzy matching (0–5).
 
         Returns:
@@ -308,25 +308,25 @@ class APMEEngine:
         warnings:   list[str],
         max_errors: int = 1,
     ) -> list[int]:
-        """Call the appropriate C binding, falling back to Python KMP if needed."""
+        """Call the appropriate C binding, falling back to Python FlowScan if needed."""
         if not c_bindings.C_BACKEND_AVAILABLE:
             if not any("C backend" in w for w in warnings):
                 warnings.append(
-                    "C backend not compiled – using pure-Python KMP fallback.  "
+                    "C backend not compiled – using pure-Python FlowScan fallback.  "
                     "Run 'python build.py' or 'make' in src/c_backend to enable "
                     "optimised C algorithms."
                 )
-            return _python_kmp(text, pattern)
+            return _python_flowscan(text, pattern)
 
-        if algo == Algorithm.FUZZY:
-            return c_bindings.fuzzy_search(text, pattern, max_errors)
+        if algo == Algorithm.TIER_MATCH:
+            return c_bindings.tiermatch_search(text, pattern, max_errors)
 
         _fn_map = {
-            Algorithm.KMP:         c_bindings.kmp_search,
-            Algorithm.BOYER_MOORE: c_bindings.bm_search,
-            Algorithm.RABIN_KARP:  c_bindings.rk_search,
-            Algorithm.SHIFT_OR:    c_bindings.so_search,
-            Algorithm.AHO_CORASICK: c_bindings.ac_search,
+            Algorithm.FLOW_SCAN:   c_bindings.flowscan_search,
+            Algorithm.SKIP_STRIDE: c_bindings.skipstride_search,
+            Algorithm.TWIN_HASH:   c_bindings.twinhash_search,
+            Algorithm.BIT_ANCHOR:  c_bindings.bitanchor_search,
+            Algorithm.WEB_SCAN:    c_bindings.webscan_search,
         }
         return _fn_map[algo](text, pattern)
 
@@ -407,12 +407,12 @@ class APMEEngine:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Pure-Python KMP fallback (used when C library is unavailable)
+# Pure-Python FlowScan fallback (used when C library is unavailable)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _python_kmp(text: str, pattern: str) -> list[int]:
+def _python_flowscan(text: str, pattern: str) -> list[int]:
     """
-    Pure-Python KMP implementation.
+    Pure-Python FlowScan implementation (LPS-based exact search).
     Activated automatically when the C shared library cannot be loaded.
     O(n + m) time, O(m) space.
     """

@@ -1,0 +1,8 @@
+# APME – Python Dependencies
+# Install with: pip install -r requirements.txt
+
+flask>=3.0.0
+flask-login>=0.6.3
+pymongo>=4.6.0
+werkzeug>=3.0.0
+python-dotenv>=1.0.0

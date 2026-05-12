@@ -8,16 +8,16 @@ The library is expected at:
     <project_root>/src/c_backend/algorithms.<ext>
 
 If the library cannot be found, C_BACKEND_AVAILABLE is set to False and
-the engine falls back to its pure-Python KMP implementation.
+the engine falls back to its pure-Python FlowScan implementation.
 
 Public API
 ----------
     from src.engine.c_bindings import (
-        kmp_search, bm_search, rk_search,
-        so_search, ac_search, fuzzy_search,
+        flowscan_search, skipstride_search, twinhash_search,
+        bitanchor_search, webscan_search, tiermatch_search,
     )
-    positions = kmp_search("hello world", "world")          # → [6]
-    positions = fuzzy_search("hello world", "wrold", k=1)   # → [6]
+    positions = flowscan_search("hello world", "world")           # → [6]
+    positions = tiermatch_search("hello world", "wrold", k=1)    # → [6]
 """
 
 from __future__ import annotations
@@ -69,14 +69,15 @@ def _configure(lib: ctypes.CDLL) -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_int),  # positions[]
         ctypes.c_int,                  # max_res
     ]
-    for name in ("kmp_search", "bm_search", "rk_search", "so_search", "ac_search"):
+    for name in ("flowscan_search", "skipstride_search", "twinhash_search",
+                 "bitanchor_search", "webscan_search"):
         fn = getattr(lib, name)
         fn.restype  = ctypes.c_int
         fn.argtypes = _argtypes
 
-    # fuzzy_search has an extra max_errors parameter
-    lib.fuzzy_search.restype  = ctypes.c_int
-    lib.fuzzy_search.argtypes = [
+    # tiermatch_search has an extra max_errors parameter
+    lib.tiermatch_search.restype  = ctypes.c_int
+    lib.tiermatch_search.argtypes = [
         ctypes.c_char_p,               # text
         ctypes.c_int,                  # text_len
         ctypes.c_char_p,               # pattern
@@ -143,8 +144,8 @@ def _call(fn: ctypes.CFUNCTYPE, text: str, pattern: str) -> list[int]:
     return list(buf[:count])
 
 
-def _call_fuzzy(text: str, pattern: str, max_errors: int) -> list[int]:
-    """Invoke fuzzy_search (7-arg signature with max_errors)."""
+def _call_tiermatch(text: str, pattern: str, max_errors: int) -> list[int]:
+    """Invoke tiermatch_search (7-arg signature with max_errors)."""
     if not C_BACKEND_AVAILABLE:
         raise RuntimeError(
             f"C backend unavailable – using Python fallback.\nDetails: {_load_error}"
@@ -157,13 +158,13 @@ def _call_fuzzy(text: str, pattern: str, max_errors: int) -> list[int]:
     buf       = (ctypes.c_int * _MAX_RESULTS)()
     max_errors = max(0, min(5, max_errors))
 
-    count = _lib.fuzzy_search(
+    count = _lib.tiermatch_search(
         b_text, len(b_text), b_pattern, len(b_pattern),
         max_errors, buf, _MAX_RESULTS,
     )
     if count < 0:
         raise ValueError(
-            "fuzzy_search returned a negative code – likely a malloc failure."
+            "tiermatch_search returned a negative code – likely a malloc failure."
         )
     return list(buf[:count])
 
@@ -172,37 +173,37 @@ def _call_fuzzy(text: str, pattern: str, max_errors: int) -> list[int]:
 # Public wrappers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def kmp_search(text: str, pattern: str) -> list[int]:
-    """KMP search via C backend. O(n + m) guaranteed. Space O(m)."""
-    return _call(_lib.kmp_search, text, pattern)
+def flowscan_search(text: str, pattern: str) -> list[int]:
+    """FlowScan via C backend. O(n/σ₀) best case, O(n+m) worst case."""
+    return _call(_lib.flowscan_search, text, pattern)
 
 
-def bm_search(text: str, pattern: str) -> list[int]:
-    """Boyer-Moore search via C backend. O(n/m) best case. Space O(m + σ)."""
-    return _call(_lib.bm_search, text, pattern)
+def skipstride_search(text: str, pattern: str) -> list[int]:
+    """SkipStride via C backend. O(n/(m+1)) best case."""
+    return _call(_lib.skipstride_search, text, pattern)
 
 
-def rk_search(text: str, pattern: str) -> list[int]:
-    """Rabin-Karp search via C backend. O(n + m) average. Space O(1)."""
-    return _call(_lib.rk_search, text, pattern)
+def twinhash_search(text: str, pattern: str) -> list[int]:
+    """TwinHash (dual rolling hash) via C backend. O(n+m) average. Collision prob ≈ 10⁻¹⁸."""
+    return _call(_lib.twinhash_search, text, pattern)
 
 
-def so_search(text: str, pattern: str) -> list[int]:
-    """Shift-Or (Bitap) search via C backend. O(n) for m ≤ 64. Space O(σ)."""
-    return _call(_lib.so_search, text, pattern)
+def bitanchor_search(text: str, pattern: str) -> list[int]:
+    """BitAnchor via C backend. O(n) for m ≤ 64."""
+    return _call(_lib.bitanchor_search, text, pattern)
 
 
-def ac_search(text: str, pattern: str) -> list[int]:
-    """Aho-Corasick DFA search via C backend. O(n) after O(m·σ) build."""
-    return _call(_lib.ac_search, text, pattern)
+def webscan_search(text: str, pattern: str) -> list[int]:
+    """WebScan via C backend. O(n) search."""
+    return _call(_lib.webscan_search, text, pattern)
 
 
-def fuzzy_search(text: str, pattern: str, max_errors: int = 1) -> list[int]:
+def tiermatch_search(text: str, pattern: str, max_errors: int = 1) -> list[int]:
     """
-    Wu-Manber k-error Bitap search (fuzzy matching) via C backend.
+    TierMatch (Wu-Manber + best-tier deduplication) via C backend.
     O(n·k) for m ≤ 64; O(n·m) Levenshtein DP fallback for m > 64.
 
     Args:
         max_errors: Maximum allowed edit distance (0–5).
     """
-    return _call_fuzzy(text, pattern, max_errors)
+    return _call_tiermatch(text, pattern, max_errors)

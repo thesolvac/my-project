@@ -11,9 +11,9 @@
         Adaptive Pattern Matching
       </h1>
       <p class="mb-0" style="color:rgba(152,193,217,.85);font-size:.95rem;line-height:1.7">
-        Six high-performance algorithms —
-        <span style="color:#E0FBFC;font-weight:600">KMP · Boyer-Moore · Rabin-Karp</span><br class="d-none d-md-block"/>
-        <span style="color:#E0FBFC;font-weight:600">Shift-Or · Aho-Corasick · Fuzzy</span>
+        Six APME proprietary algorithms —
+        <span style="color:#E0FBFC;font-weight:600">FlowScan · SkipStride · TwinHash</span><br class="d-none d-md-block"/>
+        <span style="color:#E0FBFC;font-weight:600">BitAnchor · WebScan · TierMatch</span>
         &nbsp;— the engine picks the fastest one for your data.
       </p>
     </div>
@@ -33,6 +33,7 @@
   <div class="card-body p-4">
     <form id="searchForm" method="POST" action="{{ url_for('search.run_search') }}"
           enctype="multipart/form-data" novalidate>
+      <fieldset id="searchFieldset">
 
       <!-- Input mode tabs -->
       <ul class="nav nav-pills mb-4" id="inputTabs">
@@ -46,6 +47,12 @@
           <button class="nav-link" type="button" id="tab-file"
                   onclick="switchTab('file')">
             <i class="bi bi-file-earmark-text me-1"></i>Upload File
+          </button>
+        </li>
+        <li class="nav-item ms-1">
+          <button class="nav-link" type="button" id="tab-batch"
+                  onclick="switchTab('batch')">
+            <i class="bi bi-files me-1"></i>Batch / ZIP
           </button>
         </li>
       </ul>
@@ -84,6 +91,39 @@
               <span id="fileName" class="fw-semibold small">—</span>
               <button type="button" class="btn-close ms-auto" onclick="clearFile()"></button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch pane -->
+      <div id="pane-batch" class="d-none">
+        <div class="mb-3">
+          <label class="form-label">Upload Files or ZIP Archive</label>
+          <div class="upload-zone border rounded-3 p-5 text-center" id="batchDropZone">
+            <i class="bi bi-files display-4 mb-2" style="color:var(--lblue)"></i>
+            <p class="mb-1 fw-semibold" style="color:var(--blue)">Drag &amp; drop files here</p>
+            <p class="small mb-3" style="color:#7a8fa8">
+              .txt .log .csv .md .json .xml .py .js .zip &nbsp;·&nbsp; max 50 MB per file · up to 50 files
+            </p>
+            <input type="file" id="batch_files" name="batch_files" class="d-none"
+                   accept=".txt,.log,.csv,.md,.json,.xml,.py,.js,.html,.zip" multiple/>
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    onclick="document.getElementById('batch_files').click()">
+              <i class="bi bi-folder2-open me-1"></i>Browse Files
+            </button>
+          </div>
+          <div id="batchFileList" class="mt-2 d-none">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <small class="fw-semibold text-mblue">
+                <i class="bi bi-paperclip me-1"></i>
+                <span id="batchFileCount">0 files selected</span>
+              </small>
+              <button type="button" class="btn btn-xs btn-outline-secondary"
+                      onclick="clearBatch()">
+                <i class="bi bi-x me-1"></i>Clear
+              </button>
+            </div>
+            <div id="batchFileItems" class="batch-file-items"></div>
           </div>
         </div>
       </div>
@@ -133,16 +173,16 @@
           <label class="form-label" for="algorithm">Algorithm</label>
           <select id="algorithm" name="algorithm" class="form-select"
                   onchange="toggleFuzzyOpts()">
-            <option value="kmp">KMP – Knuth-Morris-Pratt</option>
-            <option value="boyer_moore">Boyer-Moore</option>
-            <option value="rabin_karp">Rabin-Karp</option>
-            <option value="shift_or">Shift-Or (Bitap)</option>
-            <option value="aho_corasick">Aho-Corasick</option>
-            <option value="fuzzy">Fuzzy (Approximate)</option>
+            <option value="flow_scan">FlowScan – LPS table + memchr anchor</option>
+            <option value="skip_stride">SkipStride – triple-heuristic skip search</option>
+            <option value="twin_hash">TwinHash – dual rolling hash</option>
+            <option value="bit_anchor">BitAnchor – NFA bit-parallel + dead-state skip</option>
+            <option value="web_scan">WebScan – DFA automaton + presence bitmap</option>
+            <option value="tier_match">TierMatch – approximate, best-tier dedup</option>
           </select>
         </div>
 
-        <!-- Max errors (fuzzy only) -->
+        <!-- Max errors (TierMatch only) -->
         <div class="col-md-1" id="fuzzyOptsWrapper" style="display:none !important">
           <label class="form-label" for="max_errors">k&nbsp;errors</label>
           <input type="number" id="max_errors" name="max_errors"
@@ -151,18 +191,41 @@
 
       </div>
 
+      <!-- Inline error box -->
+      <div id="searchError" class="alert alert-danger d-flex align-items-center gap-2 d-none mt-3 py-2" role="alert">
+        <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+        <span id="searchErrorMsg"></span>
+        <button type="button" class="btn-close ms-auto" onclick="clearSearchError()" aria-label="Dismiss"></button>
+      </div>
+
       <!-- Submit -->
       <div class="mt-4 d-flex gap-2 align-items-center">
         <button type="submit" class="btn btn-primary px-4" id="searchBtn">
-          <i class="bi bi-search me-2"></i>Search
+          <span id="searchBtnIcon" class="bi bi-search me-2"></span><span id="searchBtnLabel">Search</span>
         </button>
-        <button type="reset" class="btn btn-outline-secondary"
-                onclick="clearAll()">
+        <button type="reset" class="btn btn-outline-secondary" onclick="clearAll()">
           <i class="bi bi-x-circle me-1"></i>Clear
         </button>
       </div>
 
+      </fieldset>
     </form>
+  </div>
+</div>
+
+<!-- ── Skeleton loader ──────────────────────────────────────────────────────── -->
+<div id="searchSkeleton" class="d-none mb-4">
+  <div class="card border-0 shadow-sm p-4">
+    <div class="skeleton-progress mb-4">
+      <div class="skeleton-sweep"></div>
+    </div>
+    <div class="skeleton-row mb-3" style="width:65%"></div>
+    <div class="skeleton-row mb-2" style="width:40%"></div>
+    <div class="skeleton-row mb-2" style="width:55%"></div>
+    <div class="skeleton-row"      style="width:30%"></div>
+    <div class="mt-3 text-center">
+      <small class="text-muted fst-italic" id="skeletonLabel">Analyzing…</small>
+    </div>
   </div>
 </div>
 
@@ -172,25 +235,27 @@
 </h6>
 <div class="row g-3">
   {% set algos = [
-    ('bi-lightning-charge-fill', 'text-coral',  'KMP',          'O(n+m)',      'kmp',          'Guaranteed linear time — never backtracks. Best for repetitive text and small alphabets.'),
-    ('bi-skip-forward-fill',     'text-mblue',  'Boyer-Moore',  'O(n/m)',      'boyer-moore',  'Sub-linear best case — skips large chunks of text. Fastest for natural language with long patterns.'),
-    ('bi-hash',                  'text-mblue',  'Rabin-Karp',   'O(n+m) avg', 'rabin-karp',   'Rolling hash with O(1) update. Ideal for multiple patterns or very short searches.'),
-    ('bi-toggles',               'text-coral',  'Shift-Or',     'O(n)',        'shift-or',     'Bit-parallel NFA compresses the match into 64-bit integers. O(n) for patterns up to 64 bytes.'),
-    ('bi-diagram-3-fill',        'text-mblue',  'Aho-Corasick', 'O(n)',        'aho-corasick', 'Complete DFA over all patterns at once. Scans the text a single time for every pattern simultaneously.'),
-    ('bi-search-heart-fill',     'text-coral',  'Fuzzy',        'O(n·k)',      'fuzzy',        'Wu-Manber k-error Bitap. Finds approximate matches within edit distance k — typos and mutations.'),
+    ('bi-lightning-charge-fill', 'text-coral',  'FlowScan',   'O(n/σ₀)',     'flow-scan',   'LPS failure table with memchr anchor — jumps past dead stretches via SIMD. Best for rare first-character patterns.'),
+    ('bi-skip-forward-fill',     'text-mblue',  'SkipStride', 'O(n/(m+1))', 'skip-stride', 'Triple-heuristic skip search with Sunday bonus — skips one extra byte per window. Fastest for natural language.'),
+    ('bi-hash',                  'text-mblue',  'TwinHash',   'O(n+m) avg', 'twin-hash',   'Dual rolling hash with 10⁻¹⁸ false-positive rate. Near-zero verification calls on large texts.'),
+    ('bi-toggles',               'text-coral',  'BitAnchor',  'O(n)',        'bit-anchor',  'Bit-parallel NFA with dead-state memchr skip. 64-bit parallelism for patterns up to 64 bytes.'),
+    ('bi-diagram-3-fill',        'text-mblue',  'WebScan',    'O(n)',        'web-scan',    'DFA automaton with 256-bit presence bitmap — bypasses table lookups for non-pattern bytes.'),
+    ('bi-search-heart-fill',     'text-coral',  'TierMatch',  'O(n·k)',      'tier-match',  'Approximate NFA search with best-tier dedup — one result per position at the lowest edit distance.'),
   ] %}
-  {% for icon, color, name, complexity, cls, desc in algos %}
+  {% for icon, color, name, complexity, slug, desc in algos %}
   <div class="col-md-4">
-    <div class="card border-0 shadow-sm h-100 algo-ref-card">
-      <div class="card-body">
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <i class="bi {{ icon }} {{ color }} fs-5"></i>
-          <span class="fw-bold" style="color:var(--navy)">{{ name }}</span>
-          <span class="algo-complexity ms-auto">{{ complexity }}</span>
+    <a href="{{ url_for('search.algorithm_detail', slug=slug) }}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 algo-ref-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi {{ icon }} {{ color }} fs-5"></i>
+            <span class="fw-bold" style="color:var(--navy)">{{ name }}</span>
+            <span class="algo-complexity ms-auto">{{ complexity }}</span>
+          </div>
+          <p class="mb-0 small" style="color:#6b7f96;line-height:1.55">{{ desc }}</p>
         </div>
-        <p class="mb-0 small" style="color:#6b7f96;line-height:1.55">{{ desc }}</p>
       </div>
-    </div>
+    </a>
   </div>
   {% endfor %}
 </div>
@@ -199,14 +264,27 @@
 
 {% block scripts %}
 <script>
+const SEARCH_URL = {{ url_for('search.run_search')       | tojson }};
+const BATCH_URL  = {{ url_for('search.run_batch_search') | tojson }};
+
+const SKELETON_LABELS = {
+  text:  'Analyzing text content…',
+  file:  'Processing file…',
+  batch: 'Processing files…',
+};
+let currentTab = 'text';
+
 // ── Tab switching ──────────────────────────────────────────────────────────
 function switchTab(tab) {
-  const isFile = tab === 'file';
-  document.getElementById('pane-text').classList.toggle('d-none',  isFile);
-  document.getElementById('pane-file').classList.toggle('d-none', !isFile);
-  document.getElementById('tab-text').classList.toggle('active', !isFile);
-  document.getElementById('tab-file').classList.toggle('active',  isFile);
-  if (!isFile) document.getElementById('file').value = '';
+  currentTab = tab;
+  ['text', 'file', 'batch'].forEach(t => {
+    document.getElementById('pane-' + t).classList.toggle('d-none', t !== tab);
+    document.getElementById('tab-'  + t).classList.toggle('active', t === tab);
+  });
+  document.getElementById('searchForm').action = tab === 'batch' ? BATCH_URL : SEARCH_URL;
+  clearSearchError();
+  if (tab !== 'file')  document.getElementById('file').value = '';
+  if (tab !== 'batch') clearBatch();
 }
 
 // ── Manual / Auto toggle ───────────────────────────────────────────────────
@@ -225,8 +303,43 @@ function toggleAlgoSelect() {
 function toggleFuzzyOpts() {
   const algo = document.getElementById('algorithm').value;
   document.getElementById('fuzzyOptsWrapper').style.setProperty(
-    'display', algo === 'fuzzy' ? 'block' : 'none', 'important'
+    'display', algo === 'tier_match' ? 'block' : 'none', 'important'
   );
+}
+
+// ── Inline error ───────────────────────────────────────────────────────────
+function showSearchError(msg) {
+  document.getElementById('searchErrorMsg').textContent = msg;
+  document.getElementById('searchError').classList.remove('d-none');
+}
+function clearSearchError() {
+  document.getElementById('searchError').classList.add('d-none');
+}
+
+// ── Loading state ──────────────────────────────────────────────────────────
+function setSearchLoading(on) {
+  const icon  = document.getElementById('searchBtnIcon');
+  const label = document.getElementById('searchBtnLabel');
+  const btn   = document.getElementById('searchBtn');
+  const skel  = document.getElementById('searchSkeleton');
+
+  btn.disabled = on;
+  // Use CSS lock instead of fieldset.disabled — disabled fieldset strips
+  // inputs from form data before submission, causing false validation errors.
+  document.getElementById('searchForm').closest('.card')
+    .classList.toggle('form-submitting', on);
+  skel.classList.toggle('d-none', !on);
+
+  if (on) {
+    icon.className = 'spinner-border spinner-border-sm me-2';
+    label.textContent = 'Searching…';
+    document.getElementById('skeletonLabel').textContent =
+      SKELETON_LABELS[currentTab] || 'Processing…';
+    clearSearchError();
+  } else {
+    icon.className = 'bi bi-search me-2';
+    label.textContent = 'Search';
+  }
 }
 
 // ── Character counter ──────────────────────────────────────────────────────
@@ -235,7 +348,7 @@ document.getElementById('text_input').addEventListener('input', function () {
     this.value.length.toLocaleString() + ' characters';
 });
 
-// ── File drag & drop ───────────────────────────────────────────────────────
+// ── Single file drag & drop ────────────────────────────────────────────────
 const fileInput = document.getElementById('file');
 const dropZone  = document.getElementById('dropZone');
 
@@ -259,22 +372,85 @@ function clearFile() {
   fileInput.value = '';
   document.getElementById('filePreview').classList.add('d-none');
 }
+
+// ── Batch drag & drop ──────────────────────────────────────────────────────
+const batchInput = document.getElementById('batch_files');
+const batchDrop  = document.getElementById('batchDropZone');
+
+batchInput.addEventListener('change', renderBatchList);
+batchDrop.addEventListener('dragover',  e => { e.preventDefault(); batchDrop.classList.add('drag-over'); });
+batchDrop.addEventListener('dragleave', ()  => batchDrop.classList.remove('drag-over'));
+batchDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  batchDrop.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) { batchInput.files = e.dataTransfer.files; renderBatchList(); }
+});
+
+function renderBatchList() {
+  const files = batchInput.files;
+  if (!files.length) return;
+  const n = files.length;
+  document.getElementById('batchFileCount').textContent =
+    n + ' file' + (n !== 1 ? 's' : '') + ' selected';
+  document.getElementById('batchFileItems').innerHTML = Array.from(files).map(f =>
+    `<div class="batch-file-item d-flex align-items-center gap-2">
+       <i class="bi bi-file-earmark-text text-mblue flex-shrink-0"></i>
+       <span class="small text-truncate">${escapeHtml(f.name)}</span>
+       <span class="ms-auto small text-nowrap" style="color:#9bacc0">${formatBytes(f.size)}</span>
+     </div>`
+  ).join('');
+  document.getElementById('batchFileList').classList.remove('d-none');
+}
+
+function clearBatch() {
+  batchInput.value = '';
+  document.getElementById('batchFileList').classList.add('d-none');
+  document.getElementById('batchFileItems').innerHTML = '';
+}
+
+// ── Clear all ──────────────────────────────────────────────────────────────
 function clearAll() {
   document.getElementById('text_input').value = '';
   document.getElementById('charCount').textContent = '0 characters';
   clearFile();
+  clearBatch();
+  clearSearchError();
 }
 
 // ── Submit guard ───────────────────────────────────────────────────────────
 document.getElementById('searchForm').addEventListener('submit', function (e) {
-  const pattern = document.getElementById('pattern').value.trim();
-  const text    = document.getElementById('text_input').value.trim();
-  const hasFile = fileInput.files.length > 0;
-  if (!pattern)          { e.preventDefault(); alert('Please enter a search pattern.'); return; }
-  if (!text && !hasFile) { e.preventDefault(); alert('Please enter text or upload a file.'); return; }
-  const btn = document.getElementById('searchBtn');
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Searching…';
-  btn.disabled  = true;
+  clearSearchError();
+  const pattern  = document.getElementById('pattern').value.trim();
+  const text     = document.getElementById('text_input').value.trim();
+  const hasFile  = fileInput.files.length > 0;
+  const hasBatch = batchInput.files.length > 0;
+
+  if (!pattern) {
+    e.preventDefault(); showSearchError('Please enter a search pattern.'); return;
+  }
+  if (currentTab === 'text'  && !text)    { e.preventDefault(); showSearchError('Please enter text to search.'); return; }
+  if (currentTab === 'file'  && !hasFile) { e.preventDefault(); showSearchError('Please upload a file.'); return; }
+  if (currentTab === 'batch' && !hasBatch){ e.preventDefault(); showSearchError('Please select at least one file.'); return; }
+
+  setSearchLoading(true);
 });
+
+// ── Algorithm prefill from detail page ────────────────────────────────────
+(function () {
+  const prefill = sessionStorage.getItem('apme_prefill_alg');
+  if (!prefill) return;
+  sessionStorage.removeItem('apme_prefill_alg');
+  const map = {
+    'flow-scan': 'flow_scan', 'skip-stride': 'skip_stride', 'twin-hash': 'twin_hash',
+    'bit-anchor': 'bit_anchor', 'web-scan': 'web_scan', 'tier-match': 'tier_match',
+  };
+  const val = map[prefill];
+  if (!val) return;
+  document.getElementById('modeManual').checked = true;
+  toggleAlgoSelect();
+  document.getElementById('algorithm').value = val;
+  toggleFuzzyOpts();
+  document.getElementById('pattern').focus();
+})();
 </script>
 {% endblock %}

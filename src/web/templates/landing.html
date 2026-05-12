@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+
+{# Allow full-width hero by removing the container wrapper #}
+{% block main_class %}{% endblock %}
+
+{% block content %}
+
+<!-- ══ Hero ══════════════════════════════════════════════════════════════════ -->
+<section class="landing-hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+
+      <!-- Left: copy + CTA -->
+      <div class="col-lg-6">
+        <div class="mb-3">
+          <span class="badge fw-semibold px-3 py-2" style="background:rgba(59,130,246,.25);border:1px solid rgba(59,130,246,.5);color:#93C5FD">
+            <i class="bi bi-cpu me-1"></i>APME — Six C-Backed Algorithms
+          </span>
+        </div>
+        <h1 class="hero-title fw-bold lh-sm mb-3">
+          Adaptive Pattern<br>
+          <span style="color:var(--blue)">Matching Engine</span>
+        </h1>
+        <p class="hero-sub mb-4">
+          High-performance string search with intelligent algorithm selection.
+          APME analyses your text and pattern in real time, then dispatches to
+          the optimal C-backed algorithm — automatically.
+        </p>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 fw-semibold">
+            <i class="bi bi-person-plus me-2"></i>Get Started
+          </a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg px-4">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: scan animation block -->
+      <div class="col-lg-6 d-flex justify-content-center">
+        <div class="scan-block">
+          <!-- Animated scan beam -->
+          <div class="scan-beam"></div>
+
+          <!-- Code lines with match highlights -->
+          <div class="code-line">
+            <span class="cl-kw">const</span> text <span class="cl-op">=</span>
+            <span class="cl-str">"adaptive pattern matching engine"</span><span class="cl-op">;</span>
+          </div>
+          <div class="code-line">
+            <span class="cl-kw">const</span> pattern <span class="cl-op">=</span>
+            <span class="cl-str">"<span class="scan-match sm1">pattern</span>"</span><span class="cl-op">;</span>
+          </div>
+          <div class="code-line mt-2">
+            <span class="cl-fn">APME</span><span class="cl-op">.</span><span class="cl-fn">search</span>(text, pattern)
+          </div>
+          <div class="code-line">
+            &nbsp;&nbsp;<span class="cl-op">→</span> algo<span class="cl-op">:</span>
+            <span class="cl-str">"<span class="scan-match sm2">SkipStride</span>"</span>
+          </div>
+          <div class="code-line">
+            &nbsp;&nbsp;<span class="cl-op">→</span> matches<span class="cl-op">:</span>
+            <span class="scan-match sm3">1</span>
+          </div>
+          <div class="code-line">
+            &nbsp;&nbsp;<span class="cl-op">→</span> time<span class="cl-op">:</span>
+            <span class="scan-match sm4">0.041 ms</span>
+          </div>
+
+          <!-- Stats strip -->
+          <div class="mt-3 pt-3 d-flex gap-3 flex-wrap" style="border-top:1px solid rgba(59,130,246,.15);font-size:.75rem;">
+            <span><span style="color:var(--blue);font-weight:700">6</span> Algorithms</span>
+            <span><span style="color:var(--blue);font-weight:700">O(n)</span> Guaranteed</span>
+            <span><span style="color:var(--blue);font-weight:700">C</span> Backend</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ Info Tabs ══════════════════════════════════════════════════════════════ -->
+<section class="py-5 bg-white">
+  <div class="container">
+
+    <div class="text-center mb-4">
+      <h2 class="fw-bold" style="color:var(--slate)">Learn About APME</h2>
+      <p class="text-muted">Intelligent, automatic algorithm selection backed by rigorous complexity theory.</p>
+    </div>
+
+    <!-- Tab nav -->
+    <ul class="nav nav-pills justify-content-center mb-4 gap-2" id="landingTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-about" data-bs-toggle="pill"
+                data-bs-target="#pane-about" type="button" role="tab">
+          <i class="bi bi-info-circle me-1"></i>About APME
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-selector" data-bs-toggle="pill"
+                data-bs-target="#pane-selector" type="button" role="tab">
+          <i class="bi bi-diagram-3 me-1"></i>Auto-Selection
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-algos" data-bs-toggle="pill"
+                data-bs-target="#pane-algos" type="button" role="tab">
+          <i class="bi bi-list-ul me-1"></i>Algorithm List
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-charts" data-bs-toggle="pill"
+                data-bs-target="#pane-charts" type="button" role="tab">
+          <i class="bi bi-bar-chart me-1"></i>Performance
+        </button>
+      </li>
+    </ul>
+
+    <!-- Tab panes -->
+    <div class="tab-content" id="landingTabContent">
+
+      <!-- About APME -->
+      <div class="tab-pane fade show active" id="pane-about" role="tabpanel">
+        <div class="row g-4 justify-content-center">
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+              <div class="card-body">
+                <div class="mb-3" style="font-size:2rem;color:var(--blue)"><i class="bi bi-cpu"></i></div>
+                <h5 class="fw-bold">C-Accelerated Core</h5>
+                <p class="text-muted small mb-0">
+                  All six algorithms are implemented in optimised C with SIMD-friendly
+                  memchr calls. Python bindings via ctypes keep startup overhead near zero.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+              <div class="card-body">
+                <div class="mb-3" style="font-size:2rem;color:var(--blue)"><i class="bi bi-magic"></i></div>
+                <h5 class="fw-bold">Automatic Selection</h5>
+                <p class="text-muted small mb-0">
+                  APME analyses pattern length, text size, alphabet cardinality, and
+                  repetitiveness, then selects the optimal algorithm — no configuration needed.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center p-3">
+              <div class="card-body">
+                <div class="mb-3" style="font-size:2rem;color:var(--blue)"><i class="bi bi-shield-check"></i></div>
+                <h5 class="fw-bold">Worst-Case Guarantees</h5>
+                <p class="text-muted small mb-0">
+                  Every exact-match algorithm provides a proven O(n) or O(n+m) worst-case bound.
+                  No adversarial input can trigger quadratic behaviour.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auto-Selection -->
+      <div class="tab-pane fade" id="pane-selector" role="tabpanel">
+        <div class="row justify-content-center">
+          <div class="col-lg-8">
+            <p class="text-muted mb-3 text-center">
+              APME's heuristic selector evaluates the following decision table in order:
+            </p>
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle text-sm">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:3rem">#</th>
+                    <th>Condition</th>
+                    <th>Algorithm Selected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="fw-semibold text-muted">2</td>
+                    <td>Pattern length m ≤ 2</td>
+                    <td><span class="badge badge-flow-scan">FlowScan</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">2.5</td>
+                    <td>m ≤ 64 and ASCII-only pattern</td>
+                    <td><span class="badge badge-bit-anchor">BitAnchor</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">3</td>
+                    <td>More than 1 pattern</td>
+                    <td><span class="badge badge-web-scan">WebScan</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">4</td>
+                    <td>Alphabet cardinality σ ≤ 4 (binary/DNA)</td>
+                    <td><span class="badge badge-flow-scan">FlowScan</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">5</td>
+                    <td>Repetitiveness ratio &gt; 70%</td>
+                    <td><span class="badge badge-flow-scan">FlowScan</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">6</td>
+                    <td>m &gt; 10 and σ &gt; 10 and n &gt; 5,000</td>
+                    <td><span class="badge badge-skip-stride">SkipStride</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">7</td>
+                    <td>m ≤ 10 and n &gt; 100,000</td>
+                    <td><span class="badge badge-twin-hash">TwinHash</span></td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold text-muted">8</td>
+                    <td>Default (general text)</td>
+                    <td><span class="badge badge-skip-stride">SkipStride</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-muted small text-center mt-2">
+              TierMatch (fuzzy) and WebScan (multi-pattern) are also available as manual selections.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Algorithm List -->
+      <div class="tab-pane fade" id="pane-algos" role="tabpanel">
+        <div class="row g-3">
+          {% set algo_cards = [
+            ("FlowScan",   "flow_scan",   "bi-arrow-right-circle",  "#3B82F6", "Linear exact match. LPS failure table + memchr anchor skips dead stretches in a single SIMD call.", "O(n/σ₀) best · O(n+m) worst"),
+            ("SkipStride", "skip_stride", "bi-skip-forward-circle", "#EE6C4D", "Bad Character + Good Suffix + Sunday bonus shift. Sub-linear on natural language and source code.", "O(n/(m+1)) best · O(n) worst"),
+            ("TwinHash",   "twin_hash",   "bi-hash",                "#10B981", "Dual rolling polynomial hash. False-positive probability ≈ 10⁻¹⁸ — effectively zero verifications.", "O(n+m) avg · O(1) space"),
+            ("BitAnchor",  "bit_anchor",  "bi-toggles",             "#6366F1", "NFA bit-parallelism. When NFA hits dead state, memchr jumps to next pattern[0] immediately.", "O(n) · m ≤ 64 bytes"),
+            ("WebScan",    "web_scan",    "bi-diagram-3",           "#0EA5E9", "DFA automaton + 256-bit presence bitmap. Bypasses DFA lookup for every byte absent from patterns.", "O(n) search · multi-pattern"),
+            ("TierMatch",  "tier_match",  "bi-layers",              "#F97316", "Wu-Manber k-error Bitap with best-tier dedup. One result per position at lowest error count.", "O(n·k) · approximate"),
+          ] %}
+          {% for name, slug, icon, color, desc, complexity in algo_cards %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+              <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <span style="font-size:1.4rem;color:{{ color }}"><i class="bi {{ icon }}"></i></span>
+                  <span class="fw-bold" style="color:var(--slate)">{{ name }}</span>
+                </div>
+                <p class="text-muted small mb-2">{{ desc }}</p>
+                <code class="small" style="color:{{ color }};background:rgba(0,0,0,.04);padding:2px 6px;border-radius:4px">{{ complexity }}</code>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Performance Charts -->
+      <div class="tab-pane fade" id="pane-charts" role="tabpanel">
+        <div class="row g-4 justify-content-center">
+          <div class="col-lg-5">
+            <div class="card border-0 shadow-sm p-3">
+              <h6 class="fw-semibold mb-3 text-center" style="color:var(--slate)">Best-Case Complexity</h6>
+              <canvas id="barChart" height="240"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="card border-0 shadow-sm p-3">
+              <h6 class="fw-semibold mb-3 text-center" style="color:var(--slate)">Algorithm Capabilities</h6>
+              <canvas id="radarChart" height="240"></canvas>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-muted small mt-3">
+          Relative scores — higher is better. Actual throughput depends on input characteristics.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA Strip ══════════════════════════════════════════════════════════════ -->
+<section class="py-5" style="background:var(--blue)">
+  <div class="container text-center">
+    <h2 class="fw-bold text-white mb-2">Start using APME</h2>
+    <p class="text-white mb-4" style="opacity:.85">Create an account to run searches, view history, and access algorithm analytics.</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg fw-semibold px-5">
+        <i class="bi bi-person-plus me-2"></i>Create Account
+      </a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-5">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+      </a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Bar chart: best-case complexity score ────────────────────────────────────
+(function () {
+  const ctx = document.getElementById('barChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['FlowScan','SkipStride','TwinHash','BitAnchor','WebScan','TierMatch'],
+      datasets: [{
+        label: 'Best-case score (higher = faster)',
+        data: [72, 95, 78, 88, 85, 55],
+        backgroundColor: ['#3B82F6','#EE6C4D','#10B981','#6366F1','#0EA5E9','#F97316'],
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,.06)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+})();
+
+// ── Radar chart: capability profile ──────────────────────────────────────────
+(function () {
+  const ctx = document.getElementById('radarChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Speed','Worst-case','Memory','Multi-pattern','Approx match','Short patterns'],
+      datasets: [
+        {
+          label: 'SkipStride',
+          data: [95, 80, 75, 20, 0, 60],
+          borderColor: '#EE6C4D', backgroundColor: 'rgba(238,108,77,.12)', pointBackgroundColor: '#EE6C4D',
+        },
+        {
+          label: 'BitAnchor',
+          data: [88, 90, 70, 30, 0, 95],
+          borderColor: '#6366F1', backgroundColor: 'rgba(99,102,241,.12)', pointBackgroundColor: '#6366F1',
+        },
+        {
+          label: 'TierMatch',
+          data: [55, 70, 65, 40, 100, 80],
+          borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,.12)', pointBackgroundColor: '#F97316',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        r: {
+          beginAtZero: true, max: 100,
+          ticks: { display: false },
+          grid: { color: 'rgba(0,0,0,.08)' },
+          pointLabels: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

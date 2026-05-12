@@ -5,28 +5,28 @@ Determines which C-backend algorithm will perform best for a given input,
 using purely rule-based logic derived from the theoretical complexity of
 each algorithm.  No machine-learning or AI is used.
 
-Six algorithms are available:
-  kmp          – Knuth-Morris-Pratt       O(n+m) guaranteed
-  boyer_moore  – Boyer-Moore (BC+GS)      O(n/m) best case
-  rabin_karp   – Rabin-Karp               O(n+m) average
-  shift_or     – Shift-Or / Bitap         O(n) for m ≤ 64 bytes
-  aho_corasick – Aho-Corasick automaton   O(n) search after O(m·σ) build
-  fuzzy        – Wu-Manber k-error Bitap  O(n·k); DP fallback for m > 64
+Six APME proprietary algorithms are available:
+  flow_scan   – FlowScan  (LPS table + memchr anchor)           O(n/σ₀) best, O(n+m) worst
+  skip_stride – SkipStride (triple-heuristic skip search)       O(n/(m+1)) best
+  twin_hash   – TwinHash  (dual rolling hash)                   O(n+m) avg, ≈10⁻¹⁸ false-pos
+  bit_anchor  – BitAnchor (NFA bit-parallel + dead-state skip)  O(n) for m ≤ 64
+  web_scan    – WebScan   (DFA automaton + presence bitmap)      O(n) search after O(m·σ) build
+  tier_match  – TierMatch (approximate NFA + best-tier dedup)   O(n·k); DP fallback for m > 64
 
 Auto-selection decision table (for exact algorithms):
 ───────────────────────────────────────────────────────────────────────
 Priority  Condition                                    Algorithm
 ────────  ───────────────────────────────────────────  ─────────────
-2         m ≤ 2                                        KMP
-2.5       m ≤ 64 AND ASCII-only pattern                Shift-Or
-3         num_patterns > 1                             Aho-Corasick
-4         alphabet cardinality σ ≤ 4  (binary/DNA)    KMP
-5         repetitiveness ratio  > 70 %                KMP
-6         m > 10  AND  σ > 10  AND  n > 5 000         Boyer-Moore
-7         m ≤ 10  AND  n > 100 000                    Rabin-Karp
-8         default                                      Boyer-Moore
+2         m ≤ 2                                        FlowScan
+2.5       m ≤ 64 AND ASCII-only pattern                BitAnchor
+3         num_patterns > 1                             WebScan
+4         alphabet cardinality σ ≤ 4  (binary/DNA)    FlowScan
+5         repetitiveness ratio  > 70 %                FlowScan
+6         m > 10  AND  σ > 10  AND  n > 5 000         SkipStride
+7         m ≤ 10  AND  n > 100 000                    TwinHash
+8         default                                      SkipStride
 
-Fuzzy and Aho-Corasick are also available as manual selections.
+TierMatch and WebScan are also available as manual selections.
 
 References
 ----------
@@ -46,21 +46,21 @@ from enum import Enum
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Algorithm(str, Enum):
-    KMP          = "kmp"
-    BOYER_MOORE  = "boyer_moore"
-    RABIN_KARP   = "rabin_karp"
-    SHIFT_OR     = "shift_or"
-    AHO_CORASICK = "aho_corasick"
-    FUZZY        = "fuzzy"
+    FLOW_SCAN   = "flow_scan"
+    SKIP_STRIDE = "skip_stride"
+    TWIN_HASH   = "twin_hash"
+    BIT_ANCHOR  = "bit_anchor"
+    WEB_SCAN    = "web_scan"
+    TIER_MATCH  = "tier_match"
 
     def display_name(self) -> str:
         names = {
-            "kmp":          "KMP (Knuth-Morris-Pratt)",
-            "boyer_moore":  "Boyer-Moore",
-            "rabin_karp":   "Rabin-Karp",
-            "shift_or":     "Shift-Or (Bitap)",
-            "aho_corasick": "Aho-Corasick",
-            "fuzzy":        "Fuzzy (Wu-Manber Bitap)",
+            "flow_scan":   "FlowScan",
+            "skip_stride": "SkipStride",
+            "twin_hash":   "TwinHash",
+            "bit_anchor":  "BitAnchor",
+            "web_scan":    "WebScan",
+            "tier_match":  "TierMatch",
         }
         return names[self.value]
 
@@ -78,47 +78,47 @@ class HeuristicResult:
 # ─────────────────────────────────────────────────────────────────────────────
 
 COMPLEXITY: dict[Algorithm, dict[str, str]] = {
-    Algorithm.KMP: {
-        "time_best":    "O(n + m)",
+    Algorithm.FLOW_SCAN: {
+        "time_best":    "O(n / σ₀)",
         "time_average": "O(n + m)",
         "time_worst":   "O(n + m)",
         "space":        "O(m)",
-        "note":         "Guaranteed linear; never backtracks in text.",
+        "note":         "memchr anchor skips dead-state loops; LPS table unchanged.",
     },
-    Algorithm.BOYER_MOORE: {
-        "time_best":    "O(n / m)",
-        "time_average": "O(n / m)",
+    Algorithm.SKIP_STRIDE: {
+        "time_best":    "O(n / (m + 1))",
+        "time_average": "O(n)",
         "time_worst":   "O(n)  with GS table",
         "space":        "O(m + σ)",
-        "note":         "Sub-linear on average; fastest for natural text.",
+        "note":         "Sunday bonus shift adds one extra byte skipped per window.",
     },
-    Algorithm.RABIN_KARP: {
+    Algorithm.TWIN_HASH: {
         "time_best":    "O(n + m)",
         "time_average": "O(n + m)",
-        "time_worst":   "O(n · m)  if many hash collisions",
+        "time_worst":   "O(n · m)  — deliberate collision only",
         "space":        "O(1)",
-        "note":         "Ideal for multi-pattern search; O(1) rolling update.",
+        "note":         "Dual hash reduces false-positive probability to ≈ 10⁻¹⁸.",
     },
-    Algorithm.SHIFT_OR: {
+    Algorithm.BIT_ANCHOR: {
         "time_best":    "O(n)",
         "time_average": "O(n)",
         "time_worst":   "O(n · ⌈m/64⌉)",
         "space":        "O(σ)",
-        "note":         "Bit-parallel NFA; O(n) for patterns ≤ 64 bytes.",
+        "note":         "memchr jumps from dead-NFA to next pattern[0] occurrence.",
     },
-    Algorithm.AHO_CORASICK: {
+    Algorithm.WEB_SCAN: {
         "time_best":    "O(n + m·σ)",
         "time_average": "O(n)",
         "time_worst":   "O(n)",
-        "space":        "O((m+1)·σ)",
-        "note":         "Complete DFA; optimal for multi-pattern searches.",
+        "space":        "O((m+1)·σ) + 32 bytes",
+        "note":         "256-bit presence bitmap bypasses DFA for non-pattern bytes.",
     },
-    Algorithm.FUZZY: {
+    Algorithm.TIER_MATCH: {
         "time_best":    "O(n · k)",
         "time_average": "O(n · k)",
         "time_worst":   "O(n · m)  DP fallback for m > 64",
         "space":        "O(k + σ)  /  O(m)",
-        "note":         "Wu-Manber Bitap; allows up to k edit-distance errors.",
+        "note":         "Best-tier dedup: one result per position at lowest edit distance.",
     },
 }
 
@@ -164,10 +164,10 @@ def select_algorithm(
         text:         Full text (or a representative sample) to search.
         pattern:      Primary search pattern.
         num_patterns: Number of distinct patterns in this session.
-                      A value > 1 triggers Rabin-Karp preference.
+                      A value > 1 triggers WebScan preference.
         manual:       If set, bypass heuristics and return this algorithm.
-                      Accepted values: "kmp", "boyer_moore", "rabin_karp", "shift_or",
-                         "aho_corasick", "fuzzy".
+                      Accepted values: "flow_scan", "skip_stride", "twin_hash",
+                         "bit_anchor", "web_scan", "tier_match".
 
     Returns:
         HeuristicResult with the selected Algorithm and justification.
@@ -178,7 +178,7 @@ def select_algorithm(
         try:
             algo = Algorithm(manual.lower().replace("-", "_").replace(" ", "_"))
         except ValueError:
-            algo = Algorithm.BOYER_MOORE
+            algo = Algorithm.SKIP_STRIDE
         return HeuristicResult(
             algorithm=algo,
             justification=f"Manual selection: {algo.display_name()}.",
@@ -191,42 +191,42 @@ def select_algorithm(
     # ── Rule 2: trivial / very short pattern ──────────────────────────────
     if m <= 2:
         return HeuristicResult(
-            algorithm=Algorithm.KMP,
+            algorithm=Algorithm.FLOW_SCAN,
             justification=(
-                f"Pattern length m={m} ≤ 2.  Boyer-Moore and Rabin-Karp "
+                f"Pattern length m={m} ≤ 2.  SkipStride and TwinHash "
                 "preprocessing tables (O(m + σ) and O(m)) add overhead that "
-                "cannot be recovered on such a short pattern.  KMP requires "
+                "cannot be recovered on such a short pattern.  FlowScan requires "
                 "only an O(m) LPS table and is optimal here."
             ),
-            complexity=COMPLEXITY[Algorithm.KMP],
+            complexity=COMPLEXITY[Algorithm.FLOW_SCAN],
         )
 
-    # ── Rule 2.5: short ASCII pattern → Shift-Or ──────────────────────────
+    # ── Rule 2.5: short ASCII pattern → BitAnchor ─────────────────────────
     if m <= 64 and pattern.isascii():
         return HeuristicResult(
-            algorithm=Algorithm.SHIFT_OR,
+            algorithm=Algorithm.BIT_ANCHOR,
             justification=(
                 f"Pattern length m={m} ≤ 64 and pattern is ASCII-only.  "
-                "Shift-Or encodes the NFA into a single 64-bit integer per "
+                "BitAnchor encodes the NFA into a single 64-bit integer per "
                 "character, achieving O(n) search with no branching and "
-                "excellent cache behaviour.  No preprocessing table overhead "
-                "beyond the O(σ) character bitmask array."
+                "excellent cache behaviour.  When the NFA drops to the dead "
+                "state, memchr fast-forwards to the next pattern[0] occurrence."
             ),
-            complexity=COMPLEXITY[Algorithm.SHIFT_OR],
+            complexity=COMPLEXITY[Algorithm.BIT_ANCHOR],
         )
 
-    # ── Rule 3: multiple patterns → Aho-Corasick ─────────────────────────
+    # ── Rule 3: multiple patterns → WebScan ───────────────────────────────
     if num_patterns > 1:
         return HeuristicResult(
-            algorithm=Algorithm.AHO_CORASICK,
+            algorithm=Algorithm.WEB_SCAN,
             justification=(
-                f"{num_patterns} patterns detected.  Aho-Corasick builds a "
-                "single DFA over all patterns in O(m·σ) time, then scans the "
-                "text once in O(n) — reporting every match for every pattern "
-                "simultaneously.  KMP and Boyer-Moore each require a separate "
-                "full text pass per pattern."
+                f"{num_patterns} patterns detected.  WebScan builds a "
+                "single DFA automaton over all patterns in O(m·σ) time, "
+                "then scans the text once in O(n) — reporting every match for "
+                "every pattern simultaneously.  The 256-bit presence bitmap "
+                "further bypasses DFA lookups for bytes absent from all patterns."
             ),
-            complexity=COMPLEXITY[Algorithm.AHO_CORASICK],
+            complexity=COMPLEXITY[Algorithm.WEB_SCAN],
         )
 
     sigma = _alphabet_size(text)
@@ -235,65 +235,69 @@ def select_algorithm(
     # ── Rule 4: small alphabet (binary, DNA) ──────────────────────────────
     if sigma <= 4:
         return HeuristicResult(
-            algorithm=Algorithm.KMP,
+            algorithm=Algorithm.FLOW_SCAN,
             justification=(
                 f"Alphabet cardinality σ={sigma} ≤ 4 (binary or DNA-like text).  "
-                "Boyer-Moore's Bad Character skip distance is bounded by σ, so "
+                "SkipStride's Bad Character skip distance is bounded by σ, so "
                 "with only 4 distinct characters the average skip ≈ 1 and "
-                "worst-case degrades to O(n·m).  KMP's O(n+m) guarantee "
-                "is strictly better here."
+                "worst-case degrades to O(n·m).  FlowScan's O(n+m) guarantee "
+                "is strictly better here, and the memchr anchor exploits rare "
+                "occurrences of pattern[0] when available."
             ),
-            complexity=COMPLEXITY[Algorithm.KMP],
+            complexity=COMPLEXITY[Algorithm.FLOW_SCAN],
         )
 
     # ── Rule 5: highly repetitive text ────────────────────────────────────
     if rep > 0.70:
         return HeuristicResult(
-            algorithm=Algorithm.KMP,
+            algorithm=Algorithm.FLOW_SCAN,
             justification=(
                 f"Text repetitiveness = {rep:.0%} (>{70}% same character).  "
-                "Repetitive text is Boyer-Moore's worst-case trigger: mismatches "
+                "Repetitive text is SkipStride's worst-case trigger: mismatches "
                 "are rare, bad-char skips are tiny, and runtime approaches O(n·m).  "
-                "KMP's LPS-driven backtrack avoidance keeps time strictly O(n+m)."
+                "FlowScan's LPS-driven backtrack avoidance keeps time strictly O(n+m)."
             ),
-            complexity=COMPLEXITY[Algorithm.KMP],
+            complexity=COMPLEXITY[Algorithm.FLOW_SCAN],
         )
 
     # ── Rule 6: long pattern + large alphabet + non-trivial text ──────────
     if m > 10 and sigma > 10 and n > 5_000:
         return HeuristicResult(
-            algorithm=Algorithm.BOYER_MOORE,
+            algorithm=Algorithm.SKIP_STRIDE,
             justification=(
                 f"m={m} > 10, σ={sigma} > 10, n={n:,} > 5 000.  "
-                "Boyer-Moore's Bad Character rule yields an average skip of "
-                "≈ m·(1 − 1/σ) ≈ {m * (1 - 1/sigma):.1f} characters per step.  "
-                "Expected sub-linear search time O(n/m) makes this the fastest "
-                "choice for natural-language or source-code text."
+                "SkipStride's Bad Character rule yields an average skip of "
+                f"≈ m·(1 − 1/σ) ≈ {m * (1 - 1/sigma):.1f} characters per step.  "
+                "The Sunday bonus shift inspects the byte past the window, "
+                "pushing the best case to O(n/(m+1)) — fastest for natural-language "
+                "or source-code text."
             ),
-            complexity=COMPLEXITY[Algorithm.BOYER_MOORE],
+            complexity=COMPLEXITY[Algorithm.SKIP_STRIDE],
         )
 
     # ── Rule 7: short pattern in large text ───────────────────────────────
     if m <= 10 and n > 100_000:
         return HeuristicResult(
-            algorithm=Algorithm.RABIN_KARP,
+            algorithm=Algorithm.TWIN_HASH,
             justification=(
                 f"m={m} ≤ 10 with large text n={n:,} > 100 000.  "
-                "Short patterns offer Boyer-Moore little skip distance "
-                "(avg skip ≈ m/σ ≈ {m/sigma:.2f}).  Rabin-Karp's O(1) "
-                "rolling hash update maintains high throughput without "
-                "the BC/GS table overhead."
+                "Short patterns offer SkipStride little skip distance "
+                f"(avg skip ≈ m/σ ≈ {m/sigma:.2f}).  TwinHash's O(1) "
+                "dual rolling hash update maintains high throughput; the "
+                "second independent hash drops false-positive probability "
+                "to ≈ 10⁻¹⁸, eliminating verification overhead entirely."
             ),
-            complexity=COMPLEXITY[Algorithm.RABIN_KARP],
+            complexity=COMPLEXITY[Algorithm.TWIN_HASH],
         )
 
-    # ── Default: Boyer-Moore for general natural text ─────────────────────
+    # ── Default: SkipStride for general natural text ───────────────────────
     return HeuristicResult(
-        algorithm=Algorithm.BOYER_MOORE,
+        algorithm=Algorithm.SKIP_STRIDE,
         justification=(
-            "Default selection.  Boyer-Moore achieves the best average-case "
+            "Default selection.  SkipStride achieves the best average-case "
             "performance for general natural-language or mixed text where "
-            "no specific degenerate condition was detected."
+            "no specific degenerate condition was detected.  The Sunday bonus "
+            "shift provides an extra stride beyond the classic base algorithm."
         ),
-        complexity=COMPLEXITY[Algorithm.BOYER_MOORE],
+        complexity=COMPLEXITY[Algorithm.SKIP_STRIDE],
     )

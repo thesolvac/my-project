@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}{{ algo.name }} — Algorithm{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ────────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-4">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('search.search_tool') }}">
+        <i class="bi bi-search me-1"></i>Search
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">{{ algo.name }}</li>
+  </ol>
+</nav>
+
+<!-- ── Hero card ─────────────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4"
+     style="border-top: 4px solid {{ algo.colour }} !important">
+  <div class="card-body p-4 p-md-5">
+    <div class="mb-3">
+      <span class="badge rounded-pill px-3 py-2"
+            style="background:{{ algo.colour }}22;color:{{ algo.colour }};
+                   border:1px solid {{ algo.colour }}55;font-size:.78rem;
+                   font-weight:700;letter-spacing:.06em">
+        {{ algo.tag }}
+      </span>
+    </div>
+    <h1 class="fw-bold mb-3 h2" style="color:var(--navy)">{{ algo.name }}</h1>
+    <p class="mb-4" style="color:#4a5e78;font-size:.98rem;line-height:1.78;max-width:72ch">
+      {{ algo.summary }}
+    </p>
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <button class="btn btn-primary px-4"
+              onclick="useAlgorithm('{{ algo.slug }}')">
+        <i class="bi bi-search me-2"></i>Use This Algorithm
+      </button>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <i class="bi bi-bullseye" style="color:{{ algo.colour }}"></i>
+        <span class="small fw-semibold" style="color:var(--navy)">Best for:</span>
+        <span class="small" style="color:#4a5e78">{{ algo.best_for }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── How it works + Notes ──────────────────────────────────────────────── -->
+<div class="row g-4 mb-4">
+
+  <!-- Steps -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header">
+        <i class="bi bi-list-ol me-2" style="color:{{ algo.colour }}"></i>How It Works
+      </div>
+      <div class="card-body p-4">
+        <ol class="mb-0 ps-0" style="list-style:none">
+          {% for step in algo.steps %}
+          <li class="d-flex gap-3 {% if not loop.last %}mb-3{% endif %}">
+            <span class="flex-shrink-0 d-flex align-items-center justify-content-center
+                         rounded-circle fw-bold"
+                  style="width:28px;height:28px;min-width:28px;
+                         background:{{ algo.colour }}22;color:{{ algo.colour }};
+                         font-size:.75rem;border:1.5px solid {{ algo.colour }}44;
+                         margin-top:2px">
+              {{ loop.index }}
+            </span>
+            <p class="mb-0 small" style="color:#4a5e78;line-height:1.68">{{ step }}</p>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header">
+        <i class="bi bi-lightbulb me-2 text-mblue"></i>Key Notes
+      </div>
+      <div class="card-body p-4">
+        <ul class="mb-0 ps-0" style="list-style:none">
+          {% for note in algo.notes %}
+          <li class="d-flex gap-2 {% if not loop.last %}mb-3{% endif %}">
+            <i class="bi bi-check2-circle flex-shrink-0 mt-1"
+               style="color:{{ algo.colour }}"></i>
+            <span class="small" style="color:#4a5e78;line-height:1.65">{{ note }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Complexity table ───────────────────────────────────────────────────── -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-table" style="color:{{ algo.colour }}"></i>
+    <span>Complexity Analysis</span>
+    <span class="badge ms-1 rounded-pill"
+          style="background:{{ algo.colour }}22;color:{{ algo.colour }};
+                 border:1px solid {{ algo.colour }}44;font-size:.65rem">
+      {{ algo.tag }}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Time Complexity</th>
+          <th class="d-none d-md-table-cell">Notes</th>
+        </tr>
+      </thead>
+      <tbody class="font-monospace" style="font-size:.82rem">
+        {% for row in algo.complexity %}
+        <tr>
+          <td style="font-family:inherit;font-weight:600;color:#7a8fa8">
+            {{ row.case }}
+          </td>
+          <td>{{ row.time }}</td>
+          <td class="d-none d-md-table-cell"
+              style="font-family:inherit;font-size:.78rem;color:#9bacc0">
+            {{ row.note }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── All algorithms nav ─────────────────────────────────────────────────── -->
+<div class="mb-4">
+  <h6 class="fw-bold mb-3"
+      style="color:var(--blue);letter-spacing:.04em;font-size:.78rem;text-transform:uppercase">
+    <i class="bi bi-grid-3x2 me-2" style="color:var(--coral)"></i>Other Algorithms
+  </h6>
+  <div class="d-flex flex-wrap gap-2">
+    {% for a in all_algos %}
+    {% if a.slug != algo.slug %}
+    <a href="{{ url_for('search.algorithm_detail', slug=a.slug) }}"
+       class="btn btn-sm"
+       style="border:1px solid {{ a.colour }}55;color:{{ a.colour }};
+              background:{{ a.colour }}0d">
+      {{ a.name }}
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function useAlgorithm(slug) {
+  sessionStorage.setItem('apme_prefill_alg', slug);
+  window.location.href = {{ url_for('search.search_tool') | tojson }};
+}
+</script>
+{% endblock %}

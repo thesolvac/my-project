@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Welcome hero ──────────────────────────────────────────────────────────── -->
+<div class="dash-welcome mb-4">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div>
+      <h2 class="fw-bold mb-0">
+        Welcome back, {{ current_user.username }}
+        {% if current_user.is_admin %}
+          <span class="badge bg-warning text-dark ms-2" style="font-size:.6rem;vertical-align:middle">Admin</span>
+        {% endif %}
+      </h2>
+      <p class="mb-0 mt-1">What would you like to do today?</p>
+    </div>
+    <div class="ms-auto d-flex gap-2 flex-wrap">
+      <div class="dash-stat-chip">
+        <i class="bi bi-search me-1"></i>
+        <strong>{{ current_user.search_count or 0 }}</strong> searches
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Action cards grid ─────────────────────────────────────────────────────── -->
+<div class="row g-4 mb-5">
+
+  <!-- Search Engine — primary -->
+  <div class="col-md-6 col-xl-4">
+    <a href="{{ url_for('search.search_tool') }}" class="text-decoration-none">
+      <div class="action-card primary-action h-100">
+        <div class="action-icon">
+          <i class="bi bi-search"></i>
+        </div>
+        <h5 class="fw-bold mb-1">Search Engine</h5>
+        <p class="mb-0 small" style="opacity:.85">
+          Run exact or approximate searches against text input or uploaded files.
+          APME auto-selects the optimal algorithm for your input.
+        </p>
+        <div class="mt-3">
+          <span class="btn btn-light btn-sm fw-semibold px-3">
+            <i class="bi bi-arrow-right me-1"></i>Open Search
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Search History -->
+  <div class="col-md-6 col-xl-4">
+    <a href="{{ url_for('search.history') }}" class="text-decoration-none">
+      <div class="action-card h-100">
+        <div class="action-icon">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <h5 class="fw-bold mb-1" style="color:var(--slate)">Search History</h5>
+        <p class="text-muted mb-0 small">
+          Review past searches, matched positions, algorithm choices, and
+          performance metrics. Replay any search with one click.
+        </p>
+        <div class="mt-3">
+          <span class="btn btn-outline-primary btn-sm px-3">
+            <i class="bi bi-arrow-right me-1"></i>View History
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Statistics -->
+  <div class="col-md-6 col-xl-4">
+    <a href="{{ url_for('search.statistics') }}" class="text-decoration-none">
+      <div class="action-card h-100">
+        <div class="action-icon">
+          <i class="bi bi-bar-chart-line"></i>
+        </div>
+        <h5 class="fw-bold mb-1" style="color:var(--slate)">Statistics</h5>
+        <p class="text-muted mb-0 small">
+          View your search activity, algorithm usage breakdown, pattern length
+          averages, activity streak, and 7-day trend charts.
+        </p>
+        <div class="mt-3">
+          <span class="btn btn-outline-primary btn-sm px-3">
+            <i class="bi bi-arrow-right me-1"></i>View Stats
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {% if current_user.is_admin %}
+  <!-- Admin Dashboard -->
+  <div class="col-md-6 col-xl-4">
+    <a href="{{ url_for('admin.dashboard') }}" class="text-decoration-none">
+      <div class="action-card h-100" style="border-color:rgba(234,179,8,.35)">
+        <div class="action-icon" style="background:rgba(234,179,8,.1);color:#CA8A04">
+          <i class="bi bi-speedometer2"></i>
+        </div>
+        <h5 class="fw-bold mb-1" style="color:var(--slate)">Admin Dashboard</h5>
+        <p class="text-muted mb-0 small">
+          System-wide analytics, user management, performance logs, and
+          algorithm usage statistics across all accounts.
+        </p>
+        <div class="mt-3">
+          <span class="btn btn-outline-warning btn-sm px-3">
+            <i class="bi bi-arrow-right me-1"></i>Open Admin
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Batch Search shortcut -->
+  <div class="col-md-6 col-xl-4">
+    <a href="{{ url_for('search.search_tool') }}#batch-tab" class="text-decoration-none">
+      <div class="action-card h-100">
+        <div class="action-icon">
+          <i class="bi bi-files"></i>
+        </div>
+        <h5 class="fw-bold mb-1" style="color:var(--slate)">Batch Search</h5>
+        <p class="text-muted mb-0 small">
+          Search multiple files or a ZIP archive simultaneously. Results are
+          aggregated per file with per-file match counts and timing.
+        </p>
+        <div class="mt-3">
+          <span class="btn btn-outline-primary btn-sm px-3">
+            <i class="bi bi-arrow-right me-1"></i>Batch Mode
+          </span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Account / Logout -->
+  <div class="col-md-6 col-xl-4">
+    <div class="action-card h-100">
+      <div class="action-icon">
+        <i class="bi bi-person-circle"></i>
+      </div>
+      <h5 class="fw-bold mb-1" style="color:var(--slate)">Account</h5>
+      <p class="text-muted mb-0 small">
+        Signed in as <strong>{{ current_user.username }}</strong>
+        &lt;{{ current_user.email }}&gt;
+      </p>
+      <div class="mt-3">
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm px-3">
+          <i class="bi bi-box-arrow-right me-1"></i>Sign Out
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Algorithm quick-reference ─────────────────────────────────────────────── -->
+<div class="mb-3">
+  <h5 class="fw-bold" style="color:var(--slate)">
+    <i class="bi bi-cpu me-2 text-primary"></i>Algorithm Reference
+  </h5>
+  <p class="text-muted small">Click any card to read the full documentation.</p>
+</div>
+
+<div class="row g-3 mb-4">
+  {% set ref_algos = [
+    ("FlowScan",   "flow-scan",   "#3B82F6", "bi-arrow-right-circle",  "LPS table + memchr anchor",            "O(n/σ₀) best",    "Exact · Linear"),
+    ("SkipStride", "skip-stride", "#EE6C4D", "bi-skip-forward-circle", "BC + GS + Sunday bonus shift",         "O(n/(m+1)) best", "Exact · Sub-linear"),
+    ("TwinHash",   "twin-hash",   "#10B981", "bi-hash",                "Dual rolling hash",                    "O(n+m) avg",      "Exact · Dual-hash"),
+    ("BitAnchor",  "bit-anchor",  "#6366F1", "bi-toggles",             "NFA bit-parallel + dead-state skip",   "O(n) · m ≤ 64",   "Exact · Bit-parallel"),
+    ("WebScan",    "web-scan",    "#0EA5E9", "bi-diagram-3",           "DFA + 256-bit presence bitmap",        "O(n) search",     "Multi-pattern"),
+    ("TierMatch",  "tier-match",  "#F97316", "bi-layers",              "k-error Bitap + best-tier dedup",      "O(n·k)",          "Approximate"),
+  ] %}
+  {% for name, slug, color, icon, note, complexity, tag in ref_algos %}
+  <div class="col-sm-6 col-lg-4">
+    <a href="{{ url_for('search.algorithm_detail', slug=slug) }}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 algo-ref-card" style="border-left:3px solid {{ color }} !important;border-radius:10px;">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi {{ icon }}" style="color:{{ color }};font-size:1.1rem"></i>
+            <span class="fw-semibold" style="color:var(--slate)">{{ name }}</span>
+            <span class="badge ms-auto" style="background:{{ color }}20;color:{{ color }};font-size:.65rem">{{ tag }}</span>
+          </div>
+          <p class="text-muted small mb-1">{{ note }}</p>
+          <code style="font-size:.7rem;color:{{ color }}">{{ complexity }}</code>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

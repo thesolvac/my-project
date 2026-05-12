@@ -31,37 +31,36 @@
            width="36" height="36" aria-hidden="true" focusable="false">
         <!-- Lens outer ring -->
         <circle cx="17.5" cy="17.5" r="13.5"
-                fill="none" stroke="#E0FBFC" stroke-width="2.2"/>
+                fill="none" stroke="#3B82F6" stroke-width="2.2"/>
         <!-- Lens subtle fill -->
         <circle cx="17.5" cy="17.5" r="12.2"
-                fill="rgba(224,251,252,0.07)"/>
+                fill="rgba(59,130,246,0.07)"/>
         <!-- Text line 1 -->
         <line x1="9.5" y1="11.5" x2="25.5" y2="11.5"
-              stroke="#98C1D9" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
+              stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
         <!-- Text line 2 — dimmed (behind match highlight) -->
         <line x1="9.5" y1="17.5" x2="25.5" y2="17.5"
-              stroke="#98C1D9" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+              stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
         <!-- Match highlight rect -->
         <rect x="12.8" y="15.3" width="9.8" height="4.4" rx="2.2"
-              fill="rgba(238,108,77,0.24)"/>
-        <!-- Pattern-match nodes (coral) -->
-        <circle cx="14.5" cy="17.5" r="1.8" fill="#EE6C4D"/>
-        <circle cx="17.9" cy="17.5" r="1.8" fill="#EE6C4D"/>
-        <circle cx="21.3" cy="17.5" r="1.8" fill="#EE6C4D"/>
+              fill="rgba(59,130,246,0.18)"/>
+        <!-- Pattern-match nodes (blue) -->
+        <circle cx="14.5" cy="17.5" r="1.8" fill="#3B82F6"/>
+        <circle cx="17.9" cy="17.5" r="1.8" fill="#3B82F6"/>
+        <circle cx="21.3" cy="17.5" r="1.8" fill="#3B82F6"/>
         <!-- Connector between nodes -->
         <line x1="14.5" y1="17.5" x2="21.3" y2="17.5"
-              stroke="#EE6C4D" stroke-width="1" stroke-dasharray="2.2 1.8" opacity="0.65"/>
+              stroke="#3B82F6" stroke-width="1" stroke-dasharray="2.2 1.8" opacity="0.65"/>
         <!-- Text line 3 (slightly shorter) -->
         <line x1="9.5" y1="23.5" x2="22.5" y2="23.5"
-              stroke="#98C1D9" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
+              stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
         <!-- Handle -->
         <line x1="27.5" y1="27.5" x2="40" y2="40"
-              stroke="#EE6C4D" stroke-width="3.4" stroke-linecap="round"/>
+              stroke="#3B82F6" stroke-width="3.4" stroke-linecap="round"/>
       </svg>
 
       <span class="apme-brand-text">APME</span>
       <span class="apme-brand-tagline d-none d-md-inline">— Adaptive Pattern Matching</span>
-      <span class="apme-version-badge">v1.0</span>
     </a>
 
     <button class="navbar-toggler" type="button"
@@ -74,8 +73,14 @@
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-1">
         {% if current_user.is_authenticated %}
           <li class="nav-item">
-            <a class="nav-link {{ 'active' if request.endpoint == 'search.index' }}"
-               href="{{ url_for('search.index') }}">
+            <a class="nav-link {{ 'active' if request.endpoint == 'search.dashboard' }}"
+               href="{{ url_for('search.dashboard') }}">
+              <i class="bi bi-house me-1"></i>Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {{ 'active' if request.endpoint in ('search.search_tool', 'search.run_search', 'search.run_batch_search') }}"
+               href="{{ url_for('search.search_tool') }}">
               <i class="bi bi-search me-1"></i>Search
             </a>
           </li>
@@ -83,6 +88,12 @@
             <a class="nav-link {{ 'active' if request.endpoint == 'search.history' }}"
                href="{{ url_for('search.history') }}">
               <i class="bi bi-clock-history me-1"></i>History
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {{ 'active' if request.endpoint == 'search.statistics' }}"
+               href="{{ url_for('search.statistics') }}">
+              <i class="bi bi-bar-chart-line me-1"></i>Statistics
             </a>
           </li>
           {% if current_user.is_admin %}
@@ -95,16 +106,16 @@
           {% endif %}
           <li class="nav-item ms-lg-2">
             <div class="dropdown">
-              <button class="btn btn-outline-light btn-sm dropdown-toggle"
+              <button class="btn btn-outline-primary btn-sm dropdown-toggle"
                       data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
                 {% if current_user.is_admin %}
-                  <span class="badge ms-1" style="background:rgba(238,108,77,.35);color:#f0a07a;font-size:.58rem">Admin</span>
+                  <span class="badge ms-1 bg-warning text-dark" style="font-size:.58rem">Admin</span>
                 {% endif %}
               </button>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><span class="dropdown-item-text small" style="color:#7a8fa8">{{ current_user.email }}</span></li>
-                <li><hr class="dropdown-divider" style="border-color:rgba(152,193,217,.3)"></li>
+                <li><span class="dropdown-item-text small text-muted">{{ current_user.email }}</span></li>
+                <li><hr class="dropdown-divider"></li>
                 <li>
                   <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
                     <i class="bi bi-box-arrow-right me-2"></i>Logout
@@ -146,7 +157,7 @@
 </div>
 
 <!-- ── Main content ─────────────────────────────────────────────────────────── -->
-<main class="container my-4">
+<main class="{% block main_class %}container my-4{% endblock %}">
   {% block content %}{% endblock %}
 </main>
 
@@ -159,26 +170,26 @@
       <div class="d-flex align-items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44"
              width="22" height="22" aria-hidden="true">
-          <circle cx="17.5" cy="17.5" r="13.5" fill="none" stroke="#98C1D9" stroke-width="2"/>
-          <line x1="9.5" y1="17.5" x2="25.5" y2="17.5" stroke="#98C1D9" stroke-width="1.3" stroke-linecap="round" opacity="0.4"/>
-          <circle cx="14.5" cy="17.5" r="1.5" fill="#EE6C4D"/>
-          <circle cx="17.9" cy="17.5" r="1.5" fill="#EE6C4D"/>
-          <circle cx="21.3" cy="17.5" r="1.5" fill="#EE6C4D"/>
-          <line x1="27.5" y1="27.5" x2="40" y2="40" stroke="#EE6C4D" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="17.5" cy="17.5" r="13.5" fill="none" stroke="#3B82F6" stroke-width="2"/>
+          <line x1="9.5" y1="17.5" x2="25.5" y2="17.5" stroke="#93C5FD" stroke-width="1.3" stroke-linecap="round" opacity="0.4"/>
+          <circle cx="14.5" cy="17.5" r="1.5" fill="#3B82F6"/>
+          <circle cx="17.9" cy="17.5" r="1.5" fill="#3B82F6"/>
+          <circle cx="21.3" cy="17.5" r="1.5" fill="#3B82F6"/>
+          <line x1="27.5" y1="27.5" x2="40" y2="40" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>
         </svg>
         <span class="footer-brand">APME</span>
         <span class="footer-sep">·</span>
-        <span style="font-size:.72rem;color:rgba(152,193,217,.5)">Adaptive Pattern Matching Engine</span>
+        <span class="text-muted" style="font-size:.72rem">Adaptive Pattern Matching Engine</span>
       </div>
 
       <!-- Algorithm list -->
       <div class="footer-algo-list d-none d-md-block">
-        KMP <span class="footer-sep">·</span>
-        Boyer-Moore <span class="footer-sep">·</span>
-        Rabin-Karp <span class="footer-sep">·</span>
-        Shift-Or <span class="footer-sep">·</span>
-        Aho-Corasick <span class="footer-sep">·</span>
-        Fuzzy
+        FlowScan <span class="footer-sep">·</span>
+        SkipStride <span class="footer-sep">·</span>
+        TwinHash <span class="footer-sep">·</span>
+        BitAnchor <span class="footer-sep">·</span>
+        WebScan <span class="footer-sep">·</span>
+        TierMatch
       </div>
 
       <!-- Links -->

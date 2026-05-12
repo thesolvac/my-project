@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Batch Results{% endblock %}
+
+{% block content %}
+
+<!-- ── Summary bar ───────────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">
+      {% if total_matches > 0 %}
+        <i class="bi bi-check-circle-fill me-2" style="color:var(--coral)"></i>
+        {{ total_matches }} total match{{ 'es' if total_matches != 1 }} found
+      {% else %}
+        <i class="bi bi-x-circle-fill me-2" style="color:var(--lblue)"></i>
+        No matches found
+      {% endif %}
+    </h4>
+    <small style="color:#7a8fa8">
+      Pattern: <code>{{ pattern }}</code>
+      &nbsp;·&nbsp; {{ total_files }} file{{ 's' if total_files != 1 }} processed
+    </small>
+  </div>
+  <a href="{{ url_for('search.search_tool') }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>New Search
+  </a>
+</div>
+
+<!-- ── Metric cards ───────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm h-100 apme-metric"
+         style="border-top-color:{% if total_matches > 0 %}var(--coral){% else %}var(--lblue){% endif %} !important">
+      <div class="card-body">
+        <div class="metric-label">Total Matches</div>
+        <div class="metric-value"
+             style="color:{% if total_matches > 0 %}var(--coral){% else %}var(--lblue){% endif %}">
+          {{ total_matches }}
+        </div>
+        <div class="metric-sub">across all files</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm h-100 apme-metric">
+      <div class="card-body">
+        <div class="metric-label">Files Processed</div>
+        <div class="metric-value">{{ total_files }}</div>
+        <div class="metric-sub">total submitted</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="card border-0 shadow-sm h-100 apme-metric"
+         style="border-top-color:var(--coral) !important">
+      <div class="card-body">
+        <div class="metric-label">Files with Matches</div>
+        <div class="metric-value" style="color:var(--coral)">
+          {{ files_with_matches }}
+        </div>
+        <div class="metric-sub">
+          {{ ((files_with_matches / total_files * 100) | round(0) | int) if total_files else 0 }}% hit rate
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Per-file breakdown ─────────────────────────────────────────────────── -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-table text-mblue"></i>
+    <span>Per-File Breakdown</span>
+    <span class="badge ms-1" style="background:var(--blue);color:#fff">
+      {{ total_files }}
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th class="text-end">Size</th>
+            <th class="text-end">Matches</th>
+            <th>Algorithm</th>
+            <th class="text-end">Time</th>
+          </tr>
+        </thead>
+        <tbody style="font-size:.88rem">
+          {% for f in file_results %}
+          <tr>
+            <td style="max-width:260px">
+              <div class="d-flex align-items-center gap-2 text-truncate"
+                   title="{{ f.file_name }}">
+                <i class="bi bi-file-earmark-text flex-shrink-0 text-mblue"></i>
+                <span class="font-monospace text-truncate" style="font-size:.78rem">
+                  {{ f.file_name }}
+                </span>
+              </div>
+            </td>
+            <td class="text-end" style="color:#9bacc0;font-size:.78rem;white-space:nowrap">
+              {{ (f.file_size_bytes / 1024) | round(1) }} KB
+            </td>
+            {% if f.error %}
+            <td colspan="3" style="color:#c0392b;font-size:.78rem">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ f.error }}
+            </td>
+            {% else %}
+            <td class="text-end font-monospace fw-bold"
+                style="color:{% if f.match_count > 0 %}var(--coral){% else %}#9bacc0{% endif %}">
+              {{ f.match_count | default(0) }}
+            </td>
+            <td>
+              <span class="badge badge-algo
+                badge-{{ f.algorithm | lower | replace(' ', '-') | replace('(bitap)', '') | replace('(approximate)', '') | replace('(k-error)', '') | trim | replace(' ', '-') }}"
+                    style="font-size:.62rem">
+                {{ f.algorithm }}
+              </span>
+            </td>
+            <td class="text-end font-monospace"
+                style="color:#9bacc0;font-size:.78rem;white-space:nowrap">
+              {{ f.duration_ms }} ms
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

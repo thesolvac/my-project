@@ -20,7 +20,7 @@
       &nbsp;·&nbsp; Source: {{ source }}
     </small>
   </div>
-  <a href="{{ url_for('search.index') }}" class="btn btn-outline-primary btn-sm">
+  <a href="{{ url_for('search.search_tool') }}" class="btn btn-outline-primary btn-sm">
     <i class="bi bi-arrow-left me-1"></i>New Search
   </a>
 </div>
@@ -114,39 +114,6 @@
   </div>
 </div>
 
-<!-- ── Complexity table ───────────────────────────────────────────────────── -->
-{% if result.complexity %}
-<div class="card shadow-sm mb-4">
-  <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-table text-mblue"></i>
-    <span>Complexity Analysis</span>
-    <span class="badge badge-algo badge-{{ result.algorithm | replace('_','-') }} ms-1">
-      {{ result.algorithm_display }}
-    </span>
-  </div>
-  <div class="card-body p-0">
-    <table class="table table-sm mb-0">
-      <thead>
-        <tr>
-          <th>Case</th><th>Time Complexity</th>
-        </tr>
-      </thead>
-      <tbody class="font-monospace" style="font-size:.82rem">
-        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Best</td>   <td>{{ result.complexity.get('time_best',    '—') }}</td></tr>
-        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Average</td><td>{{ result.complexity.get('time_average', '—') }}</td></tr>
-        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Worst</td>  <td>{{ result.complexity.get('time_worst',   '—') }}</td></tr>
-        <tr><td style="color:#7a8fa8;font-family:inherit;font-weight:600">Space</td>  <td>{{ result.complexity.get('space',        '—') }}</td></tr>
-      </tbody>
-    </table>
-    {% if result.complexity.get('note') %}
-      <p class="small px-3 py-2 mb-0" style="color:#7a8fa8;border-top:1px solid rgba(152,193,217,.2)">
-        <i class="bi bi-info-circle me-1 text-mblue"></i>{{ result.complexity.note }}
-      </p>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
-
 <!-- ── Algorithm Comparison ───────────────────────────────────────────────── -->
 {% if result.text_snippet %}
 <div class="card shadow-sm mb-4" id="compareCard">
@@ -200,7 +167,7 @@
 <div class="text-center py-5" style="color:#7a8fa8">
   <i class="bi bi-search display-3 d-block mb-3" style="opacity:.18;color:var(--lblue)"></i>
   <p class="fs-5 mb-3">No occurrences of <code>{{ result.pattern }}</code> were found.</p>
-  <a href="{{ url_for('search.index') }}" class="btn btn-primary">
+  <a href="{{ url_for('search.search_tool') }}" class="btn btn-primary">
     <i class="bi bi-arrow-left me-1"></i>Try a different pattern
   </a>
 </div>
@@ -216,12 +183,12 @@ let compareChart   = null;
 
 // Algorithm colours aligned with the new palette
 const ALGO_COLORS = {
-  kmp:          '#3D5A80',
-  boyer_moore:  '#EE6C4D',
-  rabin_karp:   '#98C1D9',
-  shift_or:     '#293241',
-  aho_corasick: '#5b7fa3',
-  fuzzy:        '#f0956a',
+  flow_scan:   '#3D5A80',
+  skip_stride: '#EE6C4D',
+  twin_hash:   '#98C1D9',
+  bit_anchor:  '#293241',
+  web_scan:    '#5b7fa3',
+  tier_match:  '#f0956a',
 };
 
 async function runComparison() {

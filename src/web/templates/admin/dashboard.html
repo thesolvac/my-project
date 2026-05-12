@@ -92,7 +92,7 @@
         <tr>
           <td>
             <span class="badge badge-algo badge-{{ p._id | replace('_','-') }}">
-              {{ p._id | replace('_',' ') | title }}
+              {{ p.display }}
             </span>
           </td>
           <td>{{ p.total }}</td>
@@ -126,7 +126,7 @@
           <td><code>{{ s.pattern }}</code></td>
           <td>
             <span class="badge badge-algo badge-{{ s.algorithm | replace('_','-') }}">
-              {{ s.algorithm | replace('_',' ') | title }}
+              {{ s.display }}
             </span>
           </td>
           <td>
@@ -201,12 +201,12 @@ const perfStats = {{ perf_stats | tojson }};
 
 // Palette-aligned colours for all 6 algorithms
 const ALGO_COLORS = {
-  kmp:          '#3D5A80',
-  boyer_moore:  '#EE6C4D',
-  rabin_karp:   '#98C1D9',
-  shift_or:     '#293241',
-  aho_corasick: '#5b7fa3',
-  fuzzy:        '#f0956a',
+  flow_scan:   '#3D5A80',
+  skip_stride: '#EE6C4D',
+  twin_hash:   '#98C1D9',
+  bit_anchor:  '#293241',
+  web_scan:    '#5b7fa3',
+  tier_match:  '#f0956a',
 };
 const DEFAULT_COLOR = '#98C1D9';
 
@@ -220,7 +220,7 @@ Chart.defaults.color = '#7a8fa8';
 new Chart(document.getElementById('usageChart'), {
   type: 'doughnut',
   data: {
-    labels: algoStats.map(d => d._id.replace('_', '-')),
+    labels: algoStats.map(d => d.display),
     datasets: [{
       data: algoStats.map(d => d.count),
       backgroundColor: algoStats.map(d => algoColor(d._id) + 'cc'),
@@ -244,7 +244,7 @@ new Chart(document.getElementById('usageChart'), {
 new Chart(document.getElementById('perfChart'), {
   type: 'bar',
   data: {
-    labels: perfStats.map(d => d._id.replace('_', '-')),
+    labels: perfStats.map(d => d.display),
     datasets: [{
       label: 'Avg Time (ms)',
       data:  perfStats.map(d => d.avg_ms),

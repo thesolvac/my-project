@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 BACKEND = Path(__file__).parent / "src" / "c_backend"
-SOURCES = ["kmp.c", "boyer_moore.c", "rabin_karp.c", "shift_or.c", "aho_corasick.c", "fuzzy.c"]
+SOURCES = ["flowscan.c", "skipstride.c", "twinhash.c", "bitanchor.c", "webscan.c", "tiermatch.c"]
 
 
 def target() -> Path:
@@ -49,7 +49,7 @@ def build() -> bool:
         print("    https://winlibs.com/  (choose 'Release' → 'Win64' → 'UCRT')")
         print("  Then add the bin/ folder to your PATH and re-run this script.")
         print()
-        print("  The app will run with its pure-Python KMP fallback in the meantime.")
+        print("  The app will run with its pure-Python FlowScan fallback in the meantime.")
         return False
 
     if result.returncode == 0:
@@ -60,7 +60,7 @@ def build() -> bool:
     if result.stderr:
         print(result.stderr)
     print()
-    print("  The app will fall back to the pure-Python KMP implementation.")
+    print("  The app will fall back to the pure-Python FlowScan implementation.")
     return False
 
 
