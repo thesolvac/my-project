@@ -1,8 +1,8 @@
 # APME – Adaptive Pattern Matching Engine
 
 A full-stack text-search system that dynamically selects the best string-matching
-algorithm (KMP, Boyer-Moore, or Rabin-Karp) based on measurable input
-characteristics. Algorithms are implemented in C and called from Python via ctypes.
+algorithm based on measurable input characteristics. All six algorithms are
+implemented in C and called from Python via ctypes.
 
 ---
 
@@ -11,26 +11,29 @@ characteristics. Algorithms are implemented in C and called from Python via ctyp
 ```
 my-project/
 ├── src/
-│   ├── c_backend/          C algorithm implementations + shared library
-│   │   ├── algorithms.h    Public header (shared interface)
-│   │   ├── kmp.c           Knuth-Morris-Pratt  O(n+m)
-│   │   ├── boyer_moore.c   Boyer-Moore BC+GS   O(n/m) best
-│   │   ├── rabin_karp.c    Rabin-Karp RH        O(n+m) avg
+│   ├── c_backend/              C algorithm implementations + shared library
+│   │   ├── algorithms.h        Public header (shared interface)
+│   │   ├── flowscan.c          FlowScan   — KMP + memchr anchor        O(n/σ₀) best
+│   │   ├── skipstride.c        SkipStride — BM + Sunday bonus shift    O(n/(m+1)) best
+│   │   ├── twinhash.c          TwinHash   — dual rolling hash          O(n+m) avg
+│   │   ├── bitanchor.c         BitAnchor  — bit-parallel NFA + skip    O(n) / m≤64
+│   │   ├── webscan.c           WebScan    — Aho-Corasick + bitmap       O(n)
+│   │   ├── tiermatch.c         TierMatch  — k-error Bitap + dedup      O(n·k)
 │   │   └── Makefile
 │   │
-│   ├── engine/             Python orchestration layer
-│   │   ├── heuristics.py   Rule-based algorithm selector
-│   │   ├── c_bindings.py   ctypes wrappers for the C library
-│   │   └── apme.py         APMEEngine class (search / search_file / compare)
+│   ├── engine/                 Python orchestration layer
+│   │   ├── heuristics.py       Rule-based algorithm selector
+│   │   ├── c_bindings.py       ctypes wrappers for the C library
+│   │   └── apme.py             APMEEngine class (search / search_file / compare)
 │   │
-│   └── web/                Flask web application
-│       ├── app.py          Application factory
-│       ├── config.py       Environment-based configuration
-│       ├── database.py     MongoDB connection helper
-│       ├── models/         UserProxy (Flask-Login)
-│       ├── routes/         auth · search · admin blueprints
-│       ├── templates/      Jinja2 HTML templates (Bootstrap 5)
-│       └── static/         CSS & JS assets
+│   └── web/                    Flask web application
+│       ├── app.py              Application factory
+│       ├── config.py           Environment-based configuration
+│       ├── database.py         MongoDB connection helper
+│       ├── models/             UserProxy (Flask-Login)
+│       ├── routes/             auth · search · admin blueprints
+│       ├── templates/          Jinja2 HTML templates (Bootstrap 5)
+│       └── static/             CSS & JS assets
 │
 ├── docs/
 │   └── APME_Technical_Justification.md   Heuristic decision rationale
@@ -57,7 +60,7 @@ my-project/
 ### 2. Clone & install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/thesolvac/my-project.git
 cd my-project
 pip install -r requirements.txt
 ```
@@ -76,7 +79,7 @@ python build.py
 # or: make build
 ```
 
-> **No GCC?** The app falls back to a pure-Python KMP implementation automatically.
+> **No GCC?** The app falls back to a pure-Python FlowScan implementation automatically.
 
 ### 5. Start MongoDB
 
@@ -95,61 +98,92 @@ python run.py
 # or: make run
 ```
 
-Open **http://127.0.0.1:5000** in your browser.
+Open **http://127.0.0.1:5005** in your browser.
 
 ---
 
 ## Creating an Admin User
 
 ```bash
-make seed-admin
-# or manually:
-python -c "
-from src.web.app import create_app
-from src.web.database import get_db
-from werkzeug.security import generate_password_hash
-from datetime import datetime
-app = create_app()
-with app.app_context():
-    get_db().users.insert_one({
-        'username': 'admin', 'email': 'admin@example.com',
-        'password': generate_password_hash('yourpassword'),
-        'role': 'admin', 'created_at': datetime.utcnow(), 'search_count': 0,
-    })
-"
+python promote_admin.py
+# or manually via the MongoDB shell / Compass
 ```
 
 ---
 
 ## Algorithms
 
-### KMP – Knuth-Morris-Pratt
-- Pre-builds an LPS (Longest Proper Prefix = Suffix) table in O(m)
-- Never re-examines a character in the text → guaranteed O(n + m)
-- **Best for:** small alphabets, repetitive text, short patterns
+APME ships six proprietary string-matching algorithms, each a tuned variant of a
+classic base algorithm with an APME-specific optimisation.
 
-### Boyer-Moore (Bad Character + Good Suffix)
-- Scans the pattern right-to-left; on mismatch, takes the larger of two shifts
-- Average skip ≈ m·(1 − 1/σ) characters → **sub-linear O(n/m)**
-- **Best for:** natural language, long patterns, large alphabets
+### FlowScan
+- Base: Knuth-Morris-Pratt (KMP) with **memchr first-character anchor**
+- When no partial match is alive, jumps directly to the next occurrence of
+  `pattern[0]` via SIMD-accelerated `memchr` — skipping dead stretches entirely
+- Complexity: O(n/σ₀) best · O(n+m) worst · O(m) space
+- **Best for:** small alphabets (binary/DNA), repetitive text, short patterns (m ≤ 2)
 
-### Rabin-Karp (Rolling Hash)
-- Computes a polynomial hash; sliding window update is O(1)
-- Verification only on hash collision → O(n + m) average
-- **Best for:** multiple patterns, short patterns in large texts
+### SkipStride
+- Base: Boyer-Moore (Bad Character + Good Suffix) with **Sunday bonus shift**
+- After BC and GS, inspects the byte immediately beyond the current window; if
+  absent from the pattern, skips the entire window + 1 in one stride
+- Complexity: O(n/(m+1)) best · O(n) worst · O(m+σ) space
+- **Best for:** natural language, source code, long patterns, large alphabets
 
-### APME Heuristic Selector
+### TwinHash
+- Base: Rabin-Karp with **dual independent rolling hashes**
+- Maintains two parallel polynomial hashes; character verification only when both
+  agree simultaneously — false-positive probability ≈ 10⁻¹⁸
+- Complexity: O(n+m) average · O(1) space
+- **Best for:** short patterns in very large texts, fingerprinting
+
+### BitAnchor
+- Base: Shift-Or / Bitap (64-bit NFA) with **dead-state memchr skip**
+- When NFA state drops to zero (no active threads), jumps to the next `pattern[0]`
+  via `memchr` instead of advancing one byte at a time
+- Complexity: O(n) for m ≤ 64 · O(σ) space
+- **Best for:** short ASCII patterns with a rare leading byte, log scanning
+
+### WebScan
+- Base: Aho-Corasick DFA with **256-bit character presence bitmap**
+- Before each DFA transition, tests whether the byte exists in the pattern's
+  character set; non-pattern bytes reset to root with no table lookup
+- Complexity: O(n) search · O((m+1)·σ) space
+- **Best for:** multi-pattern search, keyword spotting in mixed text
+
+### TierMatch
+- Base: Wu-Manber k-error Bitap with **best-tier deduplication**
+- Scans error tiers 0→k; the first tier whose accept bit fires is recorded and
+  higher-tier duplicates at the same position are suppressed immediately
+- Complexity: O(n·k) Bitap · O(n·m) DP fallback for m > 64
+- **Best for:** fuzzy / typo-tolerant search, OCR post-processing
+
+### Auto-selection heuristic
+
+| Priority | Condition | Algorithm |
+|----------|-----------|-----------|
+| 1 | m ≤ 2 | FlowScan |
+| 2 | m ≤ 64 and ASCII-only pattern | BitAnchor |
+| 3 | Multiple patterns | WebScan |
+| 4 | Alphabet cardinality σ ≤ 4 (binary/DNA) | FlowScan |
+| 5 | Text repetitiveness > 70 % | FlowScan |
+| 6 | m > 10 and σ > 10 and n > 5 000 | SkipStride |
+| 7 | m ≤ 10 and n > 100 000 | TwinHash |
+| 8 | Default | SkipStride |
+
 See [`docs/APME_Technical_Justification.md`](docs/APME_Technical_Justification.md)
-for the full decision table and mathematical justification.
+for the full mathematical justification.
 
 ---
 
 ## Features
 
 - **Auto mode** — APME picks the optimal algorithm automatically
-- **Manual mode** — user selects the algorithm for comparison
-- **Compare benchmark** — runs all three algorithms and shows a Chart.js bar chart
+- **Manual mode** — user selects the algorithm for direct comparison
+- **Compare benchmark** — runs all six algorithms and shows a Chart.js bar chart
+- **Statistics dashboard** — per-user charts: algorithm usage, 7-day activity, input method split
 - **File streaming** — handles files up to 50 MB without loading them fully into RAM
+- **Batch search** — search multiple files or a ZIP archive simultaneously
 - **User accounts** — registration, login, per-user search history
 - **Admin dashboard** — global analytics, algorithm usage charts, user management
 - **MongoDB persistence** — search history, performance logs, user data

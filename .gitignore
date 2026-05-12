@@ -34,7 +34,8 @@ ENV/
 *.out
 
 # ── Uploads / user data ────────────────────────────────────────────────────────
-src/web/uploads/
+src/web/uploads/*
+!src/web/uploads/.gitkeep
 
 # ── IDE & editor ──────────────────────────────────────────────────────────────
 .vscode/
