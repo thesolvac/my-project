@@ -11,8 +11,8 @@
       </h1>
       <p class="mb-0" style="color:rgba(152,193,217,.85);font-size:.95rem;line-height:1.7">
         Six APME proprietary algorithms —
-        <span style="color:#E0FBFC;font-weight:600">DNAScan · GapJump · DualRabin</span><br class="d-none d-md-block"/>
-        <span style="color:#E0FBFC;font-weight:600">BitMatch · SweepRun · FuzzySearch</span>
+        <span style="color:#E0FBFC;font-weight:600">FlowScan · SkipStride · TwinHash</span><br class="d-none d-md-block"/>
+        <span style="color:#E0FBFC;font-weight:600">BitAnchor · WebScan · TierMatch</span>
         &nbsp;— the engine picks the fastest one for your data.
       </p>
     </div>
@@ -171,12 +171,12 @@
           <label class="form-label" for="algorithm">Algorithm</label>
           <select id="algorithm" name="algorithm" class="form-select"
                   onchange="toggleFuzzyOpts()">
-            <option value="dna_scan">DNAScan – bigram anchor + bidirectional LPS</option>
-            <option value="gap_jump">GapJump – 2-gram bad-character + Sunday shift</option>
-            <option value="dual_rabin">DualRabin – 4-layer hierarchical hash filter</option>
-            <option value="bit_match">BitMatch – bidirectional NFA bit-parallel</option>
-            <option value="sweep_run">SweepRun – Aho-Corasick + densification</option>
-            <option value="fuzzy_search">FuzzySearch – Myers bit-parallel approximate</option>
+            <option value="flow_scan">FlowScan – bigram anchor + bidirectional LPS</option>
+            <option value="skip_stride">SkipStride – 2-gram bad-character + Sunday shift</option>
+            <option value="twin_hash">TwinHash – 4-layer hierarchical hash filter</option>
+            <option value="bit_anchor">BitAnchor – bidirectional NFA bit-parallel</option>
+            <option value="web_scan">WebScan – Aho-Corasick + densification</option>
+            <option value="tier_match">TierMatch – Myers bit-parallel approximate</option>
           </select>
         </div>
 
@@ -231,12 +231,12 @@
 </h6>
 <div class="row g-3">
   {% set algos = [
-    ('bi-lightning-charge-fill', 'text-coral',  'DNAScan',     'O(n/σ₀)',     'dna-scan',     'Bigram anchor + bidirectional LPS — jumps past dead stretches via SIMD. Best for DNA/binary and rare bigram patterns.'),
-    ('bi-skip-forward-fill',     'text-mblue',  'GapJump',     'O(n/(m+1))', 'gap-jump',     '2-gram bad-character table + Sunday bonus — skips one extra byte per window. Fastest for natural language.'),
-    ('bi-hash',                  'text-mblue',  'DualRabin',   'O(n+m) avg', 'dual-rabin',   '4-layer hierarchical hash filter with 10⁻²² false-positive rate. Near-zero verification calls on large texts.'),
-    ('bi-toggles',               'text-coral',  'BitMatch',    'O(n)',        'bit-match',    'Bidirectional NFA bit-parallel around internal anchor. 64-bit parallelism for patterns up to 64 bytes.'),
-    ('bi-diagram-3-fill',        'text-mblue',  'SweepRun',    'O(n)',        'sweep-run',    'True Aho-Corasick DFA with densification + presence bitmap — bypasses table lookups for non-pattern bytes.'),
-    ('bi-search-heart-fill',     'text-coral',  'FuzzySearch', 'O(n·k)',      'fuzzy-search', 'Myers bit-parallel approximate search with best-tier dedup — one result per position at lowest edit distance.'),
+    ('bi-lightning-charge-fill', 'text-coral',  'FlowScan',   'O(n/σ₀)',     'flow-scan',   'Bigram anchor + bidirectional LPS — jumps past dead stretches via SIMD. Best for DNA/binary and rare bigram patterns.'),
+    ('bi-skip-forward-fill',     'text-mblue',  'SkipStride', 'O(n/(m+1))', 'skip-stride', '2-gram bad-character table + Sunday bonus — skips one extra byte per window. Fastest for natural language.'),
+    ('bi-hash',                  'text-mblue',  'TwinHash',   'O(n+m) avg', 'twin-hash',   '4-layer hierarchical hash filter with 10⁻²² false-positive rate. Near-zero verification calls on large texts.'),
+    ('bi-toggles',               'text-coral',  'BitAnchor',  'O(n)',        'bit-anchor',  'Bidirectional NFA bit-parallel around internal anchor. 64-bit parallelism for patterns up to 64 bytes.'),
+    ('bi-diagram-3-fill',        'text-mblue',  'WebScan',    'O(n)',        'web-scan',    'True Aho-Corasick DFA with densification + presence bitmap — bypasses table lookups for non-pattern bytes.'),
+    ('bi-search-heart-fill',     'text-coral',  'TierMatch',  'O(n·k)',      'tier-match',  'Myers bit-parallel approximate search with best-tier dedup — one result per position at lowest edit distance.'),
   ] %}
   {% for icon, color, name, complexity, slug, desc in algos %}
   <div class="col-md-4">
@@ -299,7 +299,7 @@ function toggleAlgoSelect() {
 function toggleFuzzyOpts() {
   const algo = document.getElementById('algorithm').value;
   document.getElementById('fuzzyOptsWrapper').style.setProperty(
-    'display', algo === 'fuzzy_search' ? 'block' : 'none', 'important'
+    'display', algo === 'tier_match' ? 'block' : 'none', 'important'
   );
 }
 
@@ -437,8 +437,8 @@ document.getElementById('searchForm').addEventListener('submit', function (e) {
   if (!prefill) return;
   sessionStorage.removeItem('apme_prefill_alg');
   const map = {
-    'dna-scan': 'dna_scan', 'gap-jump': 'gap_jump', 'dual-rabin': 'dual_rabin',
-    'bit-match': 'bit_match', 'sweep-run': 'sweep_run', 'fuzzy-search': 'fuzzy_search',
+    'flow-scan': 'flow_scan', 'skip-stride': 'skip_stride', 'twin-hash': 'twin_hash',
+    'bit-anchor': 'bit_anchor', 'web-scan': 'web_scan', 'tier-match': 'tier_match',
   };
   const val = map[prefill];
   if (!val) return;

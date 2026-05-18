@@ -210,15 +210,15 @@ class APMEEngine:
                 )
             return _python_exact_search(text, pattern)
 
-        if algo == Algorithm.FUZZY_SEARCH:
-            return c_bindings.fuzzysearch_search(text, pattern, max_errors)
+        if algo == Algorithm.TIER_MATCH:
+            return c_bindings.tiermatch_search(text, pattern, max_errors)
 
         _fn_map = {
-            Algorithm.DNA_SCAN:  c_bindings.dnascan_search,
-            Algorithm.GAP_JUMP:  c_bindings.gapjump_search,
-            Algorithm.DUAL_RABIN: c_bindings.dualrabin_search,
-            Algorithm.BIT_MATCH: c_bindings.bitmatch_search,
-            Algorithm.SWEEP_RUN: c_bindings.sweeprun_search,
+            Algorithm.FLOW_SCAN:  c_bindings.flowscan_search,
+            Algorithm.SKIP_STRIDE: c_bindings.skipstride_search,
+            Algorithm.TWIN_HASH:  c_bindings.twinhash_search,
+            Algorithm.BIT_ANCHOR: c_bindings.bitanchor_search,
+            Algorithm.WEB_SCAN:   c_bindings.webscan_search,
         }
         return _fn_map[algo](text, pattern)
 

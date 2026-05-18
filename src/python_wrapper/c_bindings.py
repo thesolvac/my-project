@@ -111,20 +111,20 @@ def _call_tiermatch(text: str, pattern: str, max_errors: int) -> list[int]:
         )
     return list(buf[:count])
 
-def dnascan_search(text: str, pattern: str) -> list[int]:
+def flowscan_search(text: str, pattern: str) -> list[int]:
     return _call(_lib.flowscan_search, text, pattern)
 
-def gapjump_search(text: str, pattern: str) -> list[int]:
+def skipstride_search(text: str, pattern: str) -> list[int]:
     return _call(_lib.skipstride_search, text, pattern)
 
-def dualrabin_search(text: str, pattern: str) -> list[int]:
+def twinhash_search(text: str, pattern: str) -> list[int]:
     return _call(_lib.twinhash_search, text, pattern)
 
-def bitmatch_search(text: str, pattern: str) -> list[int]:
+def bitanchor_search(text: str, pattern: str) -> list[int]:
     return _call(_lib.bitanchor_search, text, pattern)
 
-def sweeprun_search(text: str, pattern: str) -> list[int]:
+def webscan_search(text: str, pattern: str) -> list[int]:
     return _call(_lib.webscan_search, text, pattern)
 
-def fuzzysearch_search(text: str, pattern: str, max_errors: int = 1) -> list[int]:
+def tiermatch_search(text: str, pattern: str, max_errors: int = 1) -> list[int]:
     return _call_tiermatch(text, pattern, max_errors)

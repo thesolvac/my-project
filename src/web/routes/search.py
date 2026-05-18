@@ -21,14 +21,14 @@ _MAX_ZIP_SIZE    = 50_000_000
 _MAX_ZIP_MEMBERS = 50
 
 _ALGO_DATA = {
-    "dna-scan": {
-        "name": "DNAScan", "slug": "dna-scan",
+    "flow-scan": {
+        "name": "FlowScan", "slug": "flow-scan",
         "colour": "#3D5A80", "tag": "Linear · Exact · APME",
         "summary": (
-            "DNAScan is APME's linear exact-match algorithm. It selects an adaptive bigram anchor "
+            "FlowScan is APME's linear exact-match algorithm. It selects an adaptive bigram anchor "
             "— the rarest two-byte pair in the pattern — then scans bidirectionally from every "
             "anchor hit. An LPS failure table handles the left half; the right half advances "
-            "normally. When no active match thread exists, DNAScan calls memchr on the bigram "
+            "normally. When no active match thread exists, FlowScan calls memchr on the bigram "
             "to jump directly past dead stretches in a single SIMD-accelerated call."
         ),
         "best_for": "Repetitive text, small alphabets (binary/DNA), and any pattern where a rare bigram anchor can be identified.",
@@ -51,12 +51,12 @@ _ALGO_DATA = {
             "Fully O(n+m) worst-case guarantee.",
         ],
     },
-    "gap-jump": {
-        "name": "GapJump", "slug": "gap-jump",
+    "skip-stride": {
+        "name": "SkipStride", "slug": "skip-stride",
         "colour": "#EE6C4D", "tag": "Sub-linear · Exact · APME",
         "summary": (
-            "GapJump extends Boyer-Moore with a 2-gram bad-character table of 65,536 byte-pair "
-            "entries. Where classic BM consults a single-byte table (256 entries), GapJump looks "
+            "SkipStride extends Boyer-Moore with a 2-gram bad-character table of 65,536 byte-pair "
+            "entries. Where classic BM consults a single-byte table (256 entries), SkipStride looks "
             "up the last two bytes of the mismatched window, producing larger skip distances on "
             "every mismatch. A Sunday bonus shift further inspects the byte beyond the window, "
             "yielding shift = max(BC2, GS, Sunday) — guaranteed ≥ 1."
@@ -81,11 +81,11 @@ _ALGO_DATA = {
             "GS table prevents the quadratic worst case of Bad-Character-only implementations.",
         ],
     },
-    "dual-rabin": {
-        "name": "DualRabin", "slug": "dual-rabin",
+    "twin-hash": {
+        "name": "TwinHash", "slug": "twin-hash",
         "colour": "#98C1D9", "tag": "Dual Hash · Exact · APME",
         "summary": (
-            "DualRabin maintains a four-layer hierarchical filter before any character-level "
+            "TwinHash maintains a four-layer hierarchical filter before any character-level "
             "verification. Layer 1 is a byte-sum pre-filter; layers 2–3 are two independent "
             "rolling polynomial hashes; layer 4 is a final SSE2-accelerated byte comparison. "
             "A window must pass all four layers before a match is reported, reducing the "
@@ -111,11 +111,11 @@ _ALGO_DATA = {
             "NTT-friendly second modulus (998244353) is a standard choice in competitive programming.",
         ],
     },
-    "bit-match": {
-        "name": "BitMatch", "slug": "bit-match",
+    "bit-anchor": {
+        "name": "BitAnchor", "slug": "bit-anchor",
         "colour": "#293241", "tag": "Bit-Parallel · Exact · APME",
         "summary": (
-            "BitMatch runs two NFA bitvectors simultaneously around an internal anchor — the "
+            "BitAnchor runs two NFA bitvectors simultaneously around an internal anchor — the "
             "rarest byte inside the pattern. The left NFA scans backward from the anchor; the "
             "right NFA scans forward. Both are encoded into 64-bit integers for branch-free "
             "updates. When both NFAs drop to the dead state, memchr jumps to the next anchor "
@@ -138,14 +138,14 @@ _ALGO_DATA = {
         "notes": [
             "The bidirectional NFA around an internal anchor is the APME optimisation.",
             "Internal anchor is rarer than pattern[0], producing longer dead-state skips.",
-            "Patterns > 64 bytes fall back to DNAScan automatically.",
+            "Patterns > 64 bytes fall back to FlowScan automatically.",
         ],
     },
-    "sweep-run": {
-        "name": "SweepRun", "slug": "sweep-run",
+    "web-scan": {
+        "name": "WebScan", "slug": "web-scan",
         "colour": "#5b7fa3", "tag": "Multi-Pattern · Automaton · APME",
         "summary": (
-            "SweepRun builds a true Aho-Corasick DFA and applies three structural optimisations: "
+            "WebScan builds a true Aho-Corasick DFA and applies three structural optimisations: "
             "(1) densification — hot states are expanded into full 256-entry arrays for O(1) "
             "lookup; (2) a 256-bit presence bitmap that bypasses the DFA entirely for bytes "
             "absent from all patterns; (3) output propagation — failure links carry match sets "
@@ -171,13 +171,13 @@ _ALGO_DATA = {
             "Used in IDS/IPS keyword spotting and network packet inspection pipelines.",
         ],
     },
-    "fuzzy-search": {
-        "name": "FuzzySearch", "slug": "fuzzy-search",
+    "tier-match": {
+        "name": "TierMatch", "slug": "tier-match",
         "colour": "#f0956a", "tag": "Approximate · Myers · APME",
         "summary": (
-            "FuzzySearch implements Myers bit-parallel approximate matching (JACM 1999) with "
+            "TierMatch implements Myers bit-parallel approximate matching (JACM 1999) with "
             "best-tier deduplication. It maintains k+1 NFA bitvectors simultaneously — one per "
-            "error level. After each NFA step, FuzzySearch scans d=0 upward: the first tier that "
+            "error level. After each NFA step, TierMatch scans d=0 upward: the first tier that "
             "fires is recorded and the accept bit in all higher tiers is cleared, ensuring at most "
             "one result per text position at the lowest edit distance. For m > 64, it falls back "
             "to the multi-word Myers variant rather than naive DP."
@@ -198,7 +198,7 @@ _ALGO_DATA = {
         ],
         "notes": [
             "Myers bit-parallel + best-tier dedup is the APME optimisation — one result per position.",
-            "k=0 reduces exactly to BitMatch exact mode.",
+            "k=0 reduces exactly to BitAnchor exact mode.",
             "Setting k too high produces overwhelming false positives; k ≤ 3 is practical.",
         ],
     },
@@ -518,32 +518,38 @@ def statistics():
     return render_template("statistics.html")
 
 _ALGO_DISPLAY_MAP = {
-    "dna_scan":    "DNAScan",
-    "gap_jump":    "GapJump",
-    "dual_rabin":  "DualRabin",
-    "bit_match":   "BitMatch",
-    "sweep_run":   "SweepRun",
-    "fuzzy_search": "FuzzySearch",
-    "kmp":                       "DNAScan",
-    "kmp (knuth-morris-pratt)":  "DNAScan",
-    "knuth-morris-pratt":        "DNAScan",
-    "dnascan":                   "DNAScan",
-    "boyer-moore":               "GapJump",
-    "boyer moore":               "GapJump",
-    "gapjump":                   "GapJump",
-    "rabin-karp":                "DualRabin",
-    "rabin karp":                "DualRabin",
-    "dualrabin":                 "DualRabin",
-    "shift-or":                  "BitMatch",
-    "shift or":                  "BitMatch",
-    "bitap":                     "BitMatch",
-    "bitmatch":                  "BitMatch",
-    "aho-corasick":              "SweepRun",
-    "aho corasick":              "SweepRun",
-    "sweeprun":                  "SweepRun",
-    "fuzzy":                     "FuzzySearch",
-    "wu-manber":                 "FuzzySearch",
-    "fuzzysearch":               "FuzzySearch",
+    "flow_scan":   "FlowScan",
+    "skip_stride": "SkipStride",
+    "twin_hash":   "TwinHash",
+    "bit_anchor":  "BitAnchor",
+    "web_scan":    "WebScan",
+    "tier_match":  "TierMatch",
+    "kmp":                       "FlowScan",
+    "kmp (knuth-morris-pratt)":  "FlowScan",
+    "knuth-morris-pratt":        "FlowScan",
+    "flowscan":                  "FlowScan",
+    "dnascan":                   "FlowScan",
+    "boyer-moore":               "SkipStride",
+    "boyer moore":               "SkipStride",
+    "skipstride":                "SkipStride",
+    "gapjump":                   "SkipStride",
+    "rabin-karp":                "TwinHash",
+    "rabin karp":                "TwinHash",
+    "twinhash":                  "TwinHash",
+    "dualrabin":                 "TwinHash",
+    "shift-or":                  "BitAnchor",
+    "shift or":                  "BitAnchor",
+    "bitap":                     "BitAnchor",
+    "bitanchor":                 "BitAnchor",
+    "bitmatch":                  "BitAnchor",
+    "aho-corasick":              "WebScan",
+    "aho corasick":              "WebScan",
+    "webscan":                   "WebScan",
+    "sweeprun":                  "WebScan",
+    "fuzzy":                     "TierMatch",
+    "wu-manber":                 "TierMatch",
+    "tiermatch":                 "TierMatch",
+    "fuzzysearch":               "TierMatch",
 }
 
 def _normalize_algo(name: str | None) -> str:
