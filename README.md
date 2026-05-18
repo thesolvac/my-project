@@ -38,11 +38,13 @@ my-project/
 ├── docs/
 │   └── APME_Technical_Justification.md   Heuristic decision rationale
 │
-├── build.py          Cross-platform C compiler script
-├── app.py            Flask development server entry point
-├── requirements.txt  Python dependencies
-├── Makefile          Convenience targets
-└── .env.example      Environment variable template
+├── build.py           Cross-platform C compiler script
+├── app.py             Flask development server entry point
+├── promote_admin.py   Promote an existing user to admin role
+├── kill_port.ps1      PowerShell helper — kills process on port 5005
+├── requirements.txt   Python dependencies
+├── Makefile           Convenience targets
+└── .env.example       Environment variable template
 ```
 
 ---
