@@ -13,12 +13,12 @@ my-project/
 ├── src/
 │   ├── c_backend/              C algorithm implementations + shared library
 │   │   ├── algorithms.h        Public header (shared interface)
-│   │   ├── flowscan.c          DNAScan    — KMP + memchr anchor        O(n/σ₀) best
-│   │   ├── skipstride.c        GapJump    — BM + Sunday bonus shift    O(n/(m+1)) best
-│   │   ├── twinhash.c          DualRabin  — dual rolling hash          O(n+m) avg
-│   │   ├── bitanchor.c         BitMatch   — bit-parallel NFA + skip    O(n) / m≤64
-│   │   ├── webscan.c           SweepRun   — Aho-Corasick + bitmap       O(n)
-│   │   ├── tiermatch.c         FuzzySearch — k-error Bitap + dedup     O(n·k)
+│   │   ├── dnascan.c           DNAScan     — Bigram anchor + bidirectional LPS       O(n/σ₀) best
+│   │   ├── gapjump.c           GapJump     — 2-gram BC table + GS + Sunday bonus     O(n/(m+1)) best
+│   │   ├── dualrabin.c         DualRabin   — 4-layer hierarchical hash + SSE2        O(n+m) avg
+│   │   ├── bitmatch.c          BitMatch    — Bidirectional NFA bit-parallel + anchor O(n) / m≤64
+│   │   ├── sweeprun.c          SweepRun    — Aho-Corasick + densification + bitmap   O(n)
+│   │   ├── fuzzysearch.c       FuzzySearch — Myers bit-parallel + best-tier dedup    O(n·k)
 │   │   └── Makefile
 │   │
 │   ├── python_wrapper/         Python orchestration layer
@@ -119,44 +119,44 @@ APME ships six proprietary string-matching algorithms, each a tuned variant of a
 classic base algorithm with an APME-specific optimisation.
 
 ### DNAScan
-- Base: Knuth-Morris-Pratt (KMP) with **memchr first-character anchor**
-- When no partial match is alive, jumps directly to the next occurrence of
-  `pattern[0]` via SIMD-accelerated `memchr` — skipping dead stretches entirely
+- Base: Knuth-Morris-Pratt (KMP) with **bigram anchor + bidirectional LPS**
+- Uses a two-byte anchor to skip non-starting positions; bidirectional LPS table
+  accelerates failure-link traversal, cutting redundant comparisons further
 - Complexity: O(n/σ₀) best · O(n+m) worst · O(m) space
 - **Best for:** small alphabets (binary/DNA), repetitive text, short patterns (m ≤ 2)
 
 ### GapJump
-- Base: Boyer-Moore (Bad Character + Good Suffix) with **Sunday bonus shift**
-- After BC and GS, inspects the byte immediately beyond the current window; if
-  absent from the pattern, skips the entire window + 1 in one stride
+- Base: Boyer-Moore with **2-gram BC table + Good Suffix + Sunday bonus**
+- Bad-character table is keyed on two-byte grams; combined with Sunday's
+  look-ahead shift for maximum skip distance per window
 - Complexity: O(n/(m+1)) best · O(n) worst · O(m+σ) space
 - **Best for:** natural language, source code, long patterns, large alphabets
 
 ### DualRabin
-- Base: Rabin-Karp with **dual independent rolling hashes**
-- Maintains two parallel polynomial hashes; character verification only when both
-  agree simultaneously — false-positive probability ≈ 10⁻¹⁸
+- Base: Rabin-Karp with **4-layer hierarchical hash + SSE2**
+- Maintains four independent polynomial hashes; SSE2 intrinsics parallelize
+  rolling-hash updates — false-positive probability < 10⁻³⁰
 - Complexity: O(n+m) average · O(1) space
 - **Best for:** short patterns in very large texts, fingerprinting
 
 ### BitMatch
-- Base: Shift-Or / Bitap (64-bit NFA) with **dead-state memchr skip**
-- When NFA state drops to zero (no active threads), jumps to the next `pattern[0]`
-  via `memchr` instead of advancing one byte at a time
+- Base: Shift-Or / Bitap (64-bit NFA) with **bidirectional NFA bit-parallel + anchor**
+- Runs the NFA forward and backward simultaneously; dead-state detected via
+  `memchr` anchor to skip stretches with no hope of matching
 - Complexity: O(n) for m ≤ 64 · O(σ) space
 - **Best for:** short ASCII patterns with a rare leading byte, log scanning
 
 ### SweepRun
-- Base: Aho-Corasick DFA with **256-bit character presence bitmap**
-- Before each DFA transition, tests whether the byte exists in the pattern's
-  character set; non-pattern bytes reset to root with no table lookup
+- Base: Aho-Corasick DFA with **densification + 256-bit bitmap**
+- State table is densified to eliminate sparse rows; 256-bit presence bitmap
+  filters non-pattern bytes before any table lookup
 - Complexity: O(n) search · O((m+1)·σ) space
 - **Best for:** multi-pattern search, keyword spotting in mixed text
 
 ### FuzzySearch
-- Base: Wu-Manber k-error Bitap with **best-tier deduplication**
-- Scans error tiers 0→k; the first tier whose accept bit fires is recorded and
-  higher-tier duplicates at the same position are suppressed immediately
+- Base: Wu-Manber k-error Bitap with **Myers bit-parallel + best-tier dedup**
+- Myers bit-parallel edit-distance automaton processes k error tiers in parallel;
+  best-tier deduplication suppresses higher-error duplicates at the same position
 - Complexity: O(n·k) Bitap · O(n·m) DP fallback for m > 64
 - **Best for:** fuzzy / typo-tolerant search, OCR post-processing
 
