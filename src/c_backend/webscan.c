@@ -1,35 +1,3 @@
-/**
- * WebScan – APME Proprietary String Matching Algorithm
- * =====================================================
- *
- * Base algorithm : Aho-Corasick (trie + BFS failure links → complete DFA)
- * APME optimisation : 256-bit character presence bypass
- *
- * How it differs from classic Aho-Corasick
- * ──────────────────────────────────────────
- * Classic Aho-Corasick performs a DFA table lookup for every text byte,
- * even bytes that cannot appear in any pattern.  WebScan precomputes a
- * 256-bit presence bitmap (four 64-bit words) during automaton construction.
- * Before each DFA transition, a single bitwise AND tests whether the
- * current byte belongs to the pattern's character set.  If not, the
- * automaton resets to the root state with no table access — saving both
- * the memory load and the potential cache miss.
- *
- * In keyword searches over natural-language text, the majority of bytes
- * (punctuation, digits, rare letters) are typically absent from the pattern,
- * so WebScan short-circuits most of the inner loop.
- *
- * Complexity
- *   Construction  O(m · sigma)  — unchanged
- *   Search        O(n)          — unchanged; constant factor reduced
- *   Space         O((m+1) · sigma) + 32 bytes for presence bitmap
- *
- * When APME prefers WebScan
- *   - Multi-pattern searches (primary use case for Aho-Corasick)
- *   - Keyword spotting in mixed natural-language and code text
- *   - Any scenario where the pattern character set is a small subset of the alphabet
- */
-
 #include "algorithms.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -40,7 +8,6 @@ typedef struct {
     int fail;
     int output;
 } AcNode;
-
 
 static AcNode *build_dfa(const char *pattern, int m) {
     AcNode *nodes = (AcNode *)malloc((size_t)(m + 1) * sizeof(AcNode));
@@ -88,7 +55,6 @@ static AcNode *build_dfa(const char *pattern, int m) {
     return nodes;
 }
 
-
 int webscan_search(const char *text,    int text_len,
                    const char *pattern, int pat_len,
                    int *positions,      int max_res) {
@@ -97,11 +63,7 @@ int webscan_search(const char *text,    int text_len,
     AcNode *dfa = build_dfa(pattern, pat_len);
     if (!dfa) return -1;
 
-    /*
-     * APME WebScan optimisation — build a 256-bit character presence bitmap.
-     * presence[c >> 6] bit (c & 63) is set iff byte value c appears in pattern.
-     * A single bitwise AND per text byte replaces a DFA lookup for non-pattern chars.
-     */
+    
     uint64_t presence[4];
     memset(presence, 0, sizeof presence);
     for (int j = 0; j < pat_len; j++) {
@@ -115,10 +77,7 @@ int webscan_search(const char *text,    int text_len,
     for (int i = 0; i < text_len; i++) {
         unsigned char c = (unsigned char)text[i];
 
-        /*
-         * Presence check: if this byte cannot appear in the pattern,
-         * skip the DFA lookup and reset to root immediately.
-         */
+        
         if (!(presence[c >> 6] & ((uint64_t)1 << (c & 63)))) {
             state = 0;
             continue;

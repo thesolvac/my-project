@@ -1,10 +1,3 @@
-"""
-Authentication Blueprint
-=========================
-Handles user registration, login, and logout.
-Passwords are hashed with Werkzeug's PBKDF2-SHA256 implementation.
-"""
-
 from datetime import datetime
 
 from bson import ObjectId
@@ -17,11 +10,6 @@ from ..models.user import UserProxy
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Register
-# ─────────────────────────────────────────────────────────────────────────────
-
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -32,7 +20,6 @@ def register():
         email    = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
 
-        # ── Validation ────────────────────────────────────────────────────
         if not all([username, email, password]):
             flash("All fields are required.", "danger")
             return render_template("register.html")
@@ -50,7 +37,6 @@ def register():
             flash("Username or email is already taken.", "danger")
             return render_template("register.html")
 
-        # ── Create user ───────────────────────────────────────────────────
         doc = {
             "username":     username,
             "email":        email,
@@ -67,11 +53,6 @@ def register():
         return redirect(url_for("search.dashboard"))
 
     return render_template("register.html")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Login
-# ─────────────────────────────────────────────────────────────────────────────
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -98,11 +79,6 @@ def login():
         flash("Invalid username/email or password.", "danger")
 
     return render_template("login.html")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Logout
-# ─────────────────────────────────────────────────────────────────────────────
 
 @auth_bp.route("/logout")
 @login_required

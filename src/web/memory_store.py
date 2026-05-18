@@ -1,16 +1,3 @@
-"""
-In-Memory MongoDB-Compatible Store
-====================================
-A lightweight dict-based store that mirrors the PyMongo collection API
-used by this app.  Activated automatically when MongoDB is unreachable.
-
-Supports: insert_one, find_one, find (with sort/limit), update_one,
-          count_documents, aggregate (basic $group/$sort), create_index.
-
-Data is held in RAM only — it resets when the server restarts.
-Install MongoDB and set MONGO_URI in .env for persistent storage.
-"""
-
 from __future__ import annotations
 
 import copy
@@ -19,14 +6,11 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-# Tiny ObjectId-alike for in-memory use.
-# Uses 24-char hex IDs so bson.ObjectId(str(fake_id)) never throws.
 class _FakeObjectId:
     _counter = 0
 
     def __init__(self, value: str | None = None):
         if value:
-            # Accept real 24-hex ObjectId strings or our own format
             self._v = str(value).zfill(24)[:24]
         else:
             _FakeObjectId._counter += 1
@@ -37,26 +21,18 @@ class _FakeObjectId:
     def __eq__(self, other): return str(self) == str(other)
     def __hash__(self): return hash(self._v)
 
-
-# Expose as ObjectId so existing code works after: from bson import ObjectId
 ObjectId = _FakeObjectId
-
 
 class _InsertResult:
     def __init__(self, oid): self.inserted_id = oid
 
-
 class _UpdateResult:
     def __init__(self): self.modified_count = 1
 
-
 class _MemCollection:
-    """Mimics a pymongo Collection."""
 
     def __init__(self):
         self._docs: list[dict] = []
-
-    # ── Write ────────────────────────────────────────────────────────────
 
     def insert_one(self, doc: dict) -> _InsertResult:
         d = copy.deepcopy(doc)
@@ -82,8 +58,6 @@ class _MemCollection:
             self.insert_one(new_doc)
         return _UpdateResult()
 
-    # ── Read ─────────────────────────────────────────────────────────────
-
     def find_one(self, filt: dict = None, projection: dict = None):
         for doc in self._docs:
             if self._match(doc, filt or {}):
@@ -99,9 +73,7 @@ class _MemCollection:
         return sum(1 for d in self._docs if self._match(d, filt or {}))
 
     def create_index(self, *args, **kwargs):
-        pass   # no-op for in-memory store
-
-    # ── Aggregation (subset used by admin dashboard) ──────────────────
+        pass
 
     def aggregate(self, pipeline: list) -> list:
         docs = [copy.deepcopy(d) for d in self._docs]
@@ -115,8 +87,6 @@ class _MemCollection:
             elif "$limit" in stage:
                 docs = docs[: stage["$limit"]]
         return docs
-
-    # ── Helpers ───────────────────────────────────────────────────────
 
     @staticmethod
     def _match(doc: dict, filt: dict) -> bool:
@@ -137,7 +107,6 @@ class _MemCollection:
                     if op == "$ne"  and dv == ov: return False
                     if op == "$in"  and dv not in ov: return False
             else:
-                # Compare by string representation to handle ObjectId vs str
                 if str(doc.get(key, "")) != str(val) and doc.get(key) != val:
                     return False
         return True
@@ -148,7 +117,6 @@ class _MemCollection:
         id_field = spec.get("_id")
 
         for doc in docs:
-            # Resolve group key
             if isinstance(id_field, str) and id_field.startswith("$"):
                 key = doc.get(id_field[1:])
             else:
@@ -183,9 +151,7 @@ class _MemCollection:
 
         return list(groups.values())
 
-
 class _Cursor:
-    """Mimics a pymongo Cursor with sort() and limit()."""
 
     def __init__(self, docs: list):
         self._docs = docs
@@ -207,9 +173,7 @@ class _Cursor:
     def __iter__(self):
         return iter(self._docs)
 
-
 class MemoryDatabase:
-    """Mimics a pymongo Database; collections are created on first access."""
 
     def __init__(self):
         self._collections: dict[str, _MemCollection] = defaultdict(_MemCollection)
@@ -223,10 +187,7 @@ class MemoryDatabase:
     def create_collection(self, name: str, **_):
         return self._collections[name]
 
-
-# Module-level singleton (shared across all requests)
 _memory_db = MemoryDatabase()
-
 
 def get_memory_db() -> MemoryDatabase:
     return _memory_db

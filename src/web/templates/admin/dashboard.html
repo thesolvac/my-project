@@ -12,7 +12,6 @@
   </span>
 </div>
 
-<!-- ── Summary cards ──────────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
 
   <div class="col-sm-6 col-lg-3">
@@ -47,7 +46,6 @@
 
 </div>
 
-<!-- ── Charts ─────────────────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
 
   <div class="col-md-5">
@@ -74,7 +72,6 @@
 
 </div>
 
-<!-- ── Performance table ──────────────────────────────────────────────────── -->
 <div class="card shadow-sm mb-4">
   <div class="card-header">
     <i class="bi bi-table me-2 text-mblue"></i>Performance Summary
@@ -106,7 +103,6 @@
   </div>
 </div>
 
-<!-- ── Recent searches ────────────────────────────────────────────────────── -->
 <div class="card shadow-sm mb-4">
   <div class="card-header">
     <i class="bi bi-clock-history me-2 text-mblue"></i>Recent Searches (all users)
@@ -145,7 +141,6 @@
   </div>
 </div>
 
-<!-- ── Top users ──────────────────────────────────────────────────────────── -->
 <div class="card shadow-sm">
   <div class="card-header">
     <i class="bi bi-people me-2 text-mblue"></i>Top Users by Search Count
@@ -201,12 +196,12 @@ const perfStats = {{ perf_stats | tojson }};
 
 // Palette-aligned colours for all 6 algorithms
 const ALGO_COLORS = {
-  flow_scan:   '#3D5A80',
-  skip_stride: '#EE6C4D',
-  twin_hash:   '#98C1D9',
-  bit_anchor:  '#293241',
-  web_scan:    '#5b7fa3',
-  tier_match:  '#f0956a',
+  dna_scan:    '#3D5A80',
+  gap_jump:    '#EE6C4D',
+  dual_rabin:  '#98C1D9',
+  bit_match:   '#293241',
+  sweep_run:   '#5b7fa3',
+  fuzzy_search:'#f0956a',
 };
 const DEFAULT_COLOR = '#98C1D9';
 

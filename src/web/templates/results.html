@@ -3,7 +3,6 @@
 
 {% block content %}
 
-<!-- ── Summary bar ───────────────────────────────────────────────────────── -->
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
   <div>
     <h4 class="fw-bold mb-1">
@@ -25,7 +24,6 @@
   </a>
 </div>
 
-<!-- ── Warnings ──────────────────────────────────────────────────────────── -->
 {% if result.warnings %}
   {% for w in result.warnings %}
     <div class="alert alert-warning d-flex align-items-start gap-2 py-2 mb-3">
@@ -35,10 +33,9 @@
   {% endfor %}
 {% endif %}
 
-<!-- ── Metric cards ───────────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4">
 
-  <!-- Algorithm -->
+  
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm h-100 apme-metric">
       <div class="card-body">
@@ -57,7 +54,7 @@
     </div>
   </div>
 
-  <!-- Time -->
+  
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm h-100 apme-metric">
       <div class="card-body">
@@ -68,7 +65,7 @@
     </div>
   </div>
 
-  <!-- Text size -->
+  
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm h-100 apme-metric">
       <div class="card-body">
@@ -87,7 +84,7 @@
     </div>
   </div>
 
-  <!-- Matches -->
+  
   <div class="col-sm-6 col-lg-3">
     <div class="card border-0 shadow-sm h-100 apme-metric" style="border-top-color:{% if result.match_count > 0 %}var(--coral){% else %}var(--lblue){% endif %} !important">
       <div class="card-body">
@@ -104,7 +101,6 @@
 
 </div>
 
-<!-- ── Selection reasoning ────────────────────────────────────────────────── -->
 <div class="card border-0 shadow-sm mb-4 apme-reasoning">
   <div class="card-body py-3">
     <h6 class="fw-bold mb-2 text-mblue">
@@ -114,7 +110,6 @@
   </div>
 </div>
 
-<!-- ── Algorithm Comparison ───────────────────────────────────────────────── -->
 {% if result.text_snippet %}
 <div class="card shadow-sm mb-4" id="compareCard">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -133,7 +128,6 @@
 </div>
 {% endif %}
 
-<!-- ── Match list ─────────────────────────────────────────────────────────── -->
 {% if result.matches %}
 <div class="card shadow-sm">
   <div class="card-header d-flex align-items-center gap-2">
@@ -183,12 +177,12 @@ let compareChart   = null;
 
 // Algorithm colours aligned with the new palette
 const ALGO_COLORS = {
-  flow_scan:   '#3D5A80',
-  skip_stride: '#EE6C4D',
-  twin_hash:   '#98C1D9',
-  bit_anchor:  '#293241',
-  web_scan:    '#5b7fa3',
-  tier_match:  '#f0956a',
+  dna_scan:    '#3D5A80',
+  gap_jump:    '#EE6C4D',
+  dual_rabin:  '#98C1D9',
+  bit_match:   '#293241',
+  sweep_run:   '#5b7fa3',
+  fuzzy_search:'#f0956a',
 };
 
 async function runComparison() {

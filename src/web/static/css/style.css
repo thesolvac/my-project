@@ -443,12 +443,12 @@ code {
   padding: .3em .68em;
   border-radius: 6px;
 }
-.badge-flow-scan   { background: rgba(59,130,246,.1);  color: #1d4ed8; }
-.badge-skip-stride { background: rgba(239,68,68,.1);   color: #dc2626; }
-.badge-twin-hash   { background: rgba(6,182,212,.1);   color: #0891b2; }
-.badge-bit-anchor  { background: rgba(71,85,105,.1);   color: #1e293b; }
-.badge-web-scan    { background: rgba(99,102,241,.1);  color: #4338ca; }
-.badge-tier-match  { background: rgba(249,115,22,.1);  color: #ea580c; }
+.badge-dna-scan    { background: rgba(59,130,246,.1);  color: #1d4ed8; }
+.badge-gap-jump    { background: rgba(239,68,68,.1);   color: #dc2626; }
+.badge-dual-rabin  { background: rgba(6,182,212,.1);   color: #0891b2; }
+.badge-bit-match   { background: rgba(71,85,105,.1);   color: #1e293b; }
+.badge-sweep-run   { background: rgba(99,102,241,.1);  color: #4338ca; }
+.badge-fuzzy-search{ background: rgba(249,115,22,.1);  color: #ea580c; }
 
 .badge-auto-mode   { background: var(--blue);    color: #fff; }
 .badge-manual-mode { background: var(--slate-2); color: #fff; }

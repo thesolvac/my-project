@@ -1,14 +1,3 @@
-"""
-APME – C Backend Build Script
-================================
-Cross-platform alternative to running 'make' directly.
-Works on Windows (MinGW/gcc), Linux, and macOS.
-
-Usage:
-    python build.py           # compile C shared library
-    python build.py --clean   # remove compiled artifacts
-"""
-
 import argparse
 import subprocess
 import sys
@@ -17,14 +6,12 @@ from pathlib import Path
 BACKEND = Path(__file__).parent / "src" / "c_backend"
 SOURCES = ["flowscan.c", "skipstride.c", "twinhash.c", "bitanchor.c", "webscan.c", "tiermatch.c"]
 
-
 def target() -> Path:
     if sys.platform.startswith("win"):
         return BACKEND / "algorithms.dll"
     if sys.platform.startswith("darwin"):
         return BACKEND / "algorithms.dylib"
     return BACKEND / "algorithms.so"
-
 
 def build() -> bool:
     out = target()
@@ -63,7 +50,6 @@ def build() -> bool:
     print("  The app will fall back to the pure-Python FlowScan implementation.")
     return False
 
-
 def clean():
     removed = []
     for ext in ("*.dll", "*.so", "*.dylib", "*.o"):
@@ -74,7 +60,6 @@ def clean():
         print(f"  Removed: {', '.join(removed)}")
     else:
         print("  Nothing to clean.")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Build the APME C backend")

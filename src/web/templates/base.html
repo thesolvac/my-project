@@ -5,56 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}APME{% endblock %} — Adaptive Pattern Matching Engine</title>
 
-  <!-- Bootstrap 5 -->
+  
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
         integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
         crossorigin="anonymous"/>
-  <!-- Bootstrap Icons -->
+  
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
-  <!-- Chart.js -->
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Custom styles -->
+  
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
 </head>
 <body>
 
-<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
 <nav class="navbar navbar-expand-lg apme-navbar shadow-sm">
   <div class="container">
 
-    <!-- Logo + Wordmark -->
+    
     <a class="navbar-brand" href="{{ url_for('search.index') }}">
-      <!-- APME inline SVG logo: magnifying glass with pattern-match nodes -->
+      
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44"
            width="36" height="36" aria-hidden="true" focusable="false">
-        <!-- Lens outer ring -->
+        
         <circle cx="17.5" cy="17.5" r="13.5"
                 fill="none" stroke="#3B82F6" stroke-width="2.2"/>
-        <!-- Lens subtle fill -->
+        
         <circle cx="17.5" cy="17.5" r="12.2"
                 fill="rgba(59,130,246,0.07)"/>
-        <!-- Text line 1 -->
+        
         <line x1="9.5" y1="11.5" x2="25.5" y2="11.5"
               stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
-        <!-- Text line 2 — dimmed (behind match highlight) -->
+        
         <line x1="9.5" y1="17.5" x2="25.5" y2="17.5"
               stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
-        <!-- Match highlight rect -->
+        
         <rect x="12.8" y="15.3" width="9.8" height="4.4" rx="2.2"
               fill="rgba(59,130,246,0.18)"/>
-        <!-- Pattern-match nodes (blue) -->
+        
         <circle cx="14.5" cy="17.5" r="1.8" fill="#3B82F6"/>
         <circle cx="17.9" cy="17.5" r="1.8" fill="#3B82F6"/>
         <circle cx="21.3" cy="17.5" r="1.8" fill="#3B82F6"/>
-        <!-- Connector between nodes -->
+        
         <line x1="14.5" y1="17.5" x2="21.3" y2="17.5"
               stroke="#3B82F6" stroke-width="1" stroke-dasharray="2.2 1.8" opacity="0.65"/>
-        <!-- Text line 3 (slightly shorter) -->
+        
         <line x1="9.5" y1="23.5" x2="22.5" y2="23.5"
               stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
-        <!-- Handle -->
+        
         <line x1="27.5" y1="27.5" x2="40" y2="40"
               stroke="#3B82F6" stroke-width="3.4" stroke-linecap="round"/>
       </svg>
@@ -141,7 +140,6 @@
   </div>
 </nav>
 
-<!-- ── Flash messages ───────────────────────────────────────────────────────── -->
 <div class="container mt-3">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -156,17 +154,15 @@
   {% endwith %}
 </div>
 
-<!-- ── Main content ─────────────────────────────────────────────────────────── -->
 <main class="{% block main_class %}container my-4{% endblock %}">
   {% block content %}{% endblock %}
 </main>
 
-<!-- ── Footer ───────────────────────────────────────────────────────────────── -->
 <footer class="apme-footer">
   <div class="container">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
 
-      <!-- Brand -->
+      
       <div class="d-flex align-items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44"
              width="22" height="22" aria-hidden="true">
@@ -182,17 +178,17 @@
         <span class="text-muted" style="font-size:.72rem">Adaptive Pattern Matching Engine</span>
       </div>
 
-      <!-- Algorithm list -->
+      
       <div class="footer-algo-list d-none d-md-block">
-        FlowScan <span class="footer-sep">·</span>
-        SkipStride <span class="footer-sep">·</span>
-        TwinHash <span class="footer-sep">·</span>
-        BitAnchor <span class="footer-sep">·</span>
-        WebScan <span class="footer-sep">·</span>
-        TierMatch
+        DNAScan <span class="footer-sep">·</span>
+        GapJump <span class="footer-sep">·</span>
+        DualRabin <span class="footer-sep">·</span>
+        BitMatch <span class="footer-sep">·</span>
+        SweepRun <span class="footer-sep">·</span>
+        FuzzySearch
       </div>
 
-      <!-- Links -->
+      
       <div class="small">
         <a href="https://github.com">
           <i class="bi bi-github me-1"></i>GitHub
@@ -203,11 +199,10 @@
   </div>
 </footer>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
         crossorigin="anonymous"></script>
-<!-- Custom JS -->
+
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>

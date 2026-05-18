@@ -3,7 +3,6 @@
 
 {% block content %}
 
-<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
 <div class="apme-hero p-4 p-md-5 mb-4 text-white">
   <div class="row align-items-center">
     <div class="col-md-8">
@@ -12,8 +11,8 @@
       </h1>
       <p class="mb-0" style="color:rgba(152,193,217,.85);font-size:.95rem;line-height:1.7">
         Six APME proprietary algorithms —
-        <span style="color:#E0FBFC;font-weight:600">FlowScan · SkipStride · TwinHash</span><br class="d-none d-md-block"/>
-        <span style="color:#E0FBFC;font-weight:600">BitAnchor · WebScan · TierMatch</span>
+        <span style="color:#E0FBFC;font-weight:600">DNAScan · GapJump · DualRabin</span><br class="d-none d-md-block"/>
+        <span style="color:#E0FBFC;font-weight:600">BitMatch · SweepRun · FuzzySearch</span>
         &nbsp;— the engine picks the fastest one for your data.
       </p>
     </div>
@@ -28,14 +27,13 @@
   </div>
 </div>
 
-<!-- ── Search form ─────────────────────────────────────────────────────────── -->
 <div class="card shadow-sm border-0 mb-4">
   <div class="card-body p-4">
     <form id="searchForm" method="POST" action="{{ url_for('search.run_search') }}"
           enctype="multipart/form-data" novalidate>
       <fieldset id="searchFieldset">
 
-      <!-- Input mode tabs -->
+      
       <ul class="nav nav-pills mb-4" id="inputTabs">
         <li class="nav-item">
           <button class="nav-link active" type="button" id="tab-text"
@@ -57,7 +55,7 @@
         </li>
       </ul>
 
-      <!-- Text pane -->
+      
       <div id="pane-text">
         <div class="mb-3">
           <label class="form-label" for="text_input">Text to Search</label>
@@ -68,7 +66,7 @@
         </div>
       </div>
 
-      <!-- File pane -->
+      
       <div id="pane-file" class="d-none">
         <div class="mb-3">
           <label class="form-label">Upload File</label>
@@ -95,7 +93,7 @@
         </div>
       </div>
 
-      <!-- Batch pane -->
+      
       <div id="pane-batch" class="d-none">
         <div class="mb-3">
           <label class="form-label">Upload Files or ZIP Archive</label>
@@ -130,10 +128,10 @@
 
       <hr class="my-4" style="border-color:rgba(152,193,217,.3)"/>
 
-      <!-- Pattern + mode + algorithm row -->
+      
       <div class="row g-3 align-items-end">
 
-        <!-- Pattern -->
+        
         <div class="col-md-5">
           <label class="form-label" for="pattern">
             Search Pattern <span class="text-coral">*</span>
@@ -145,7 +143,7 @@
           </div>
         </div>
 
-        <!-- Mode -->
+        
         <div class="col-md-3">
           <label class="form-label">Selection Mode</label>
           <div class="d-flex gap-4">
@@ -168,21 +166,21 @@
           </div>
         </div>
 
-        <!-- Algorithm picker (manual only) -->
+        
         <div class="col-md-3" id="algoPickerWrapper" style="display:none !important">
           <label class="form-label" for="algorithm">Algorithm</label>
           <select id="algorithm" name="algorithm" class="form-select"
                   onchange="toggleFuzzyOpts()">
-            <option value="flow_scan">FlowScan – LPS table + memchr anchor</option>
-            <option value="skip_stride">SkipStride – triple-heuristic skip search</option>
-            <option value="twin_hash">TwinHash – dual rolling hash</option>
-            <option value="bit_anchor">BitAnchor – NFA bit-parallel + dead-state skip</option>
-            <option value="web_scan">WebScan – DFA automaton + presence bitmap</option>
-            <option value="tier_match">TierMatch – approximate, best-tier dedup</option>
+            <option value="dna_scan">DNAScan – bigram anchor + bidirectional LPS</option>
+            <option value="gap_jump">GapJump – 2-gram bad-character + Sunday shift</option>
+            <option value="dual_rabin">DualRabin – 4-layer hierarchical hash filter</option>
+            <option value="bit_match">BitMatch – bidirectional NFA bit-parallel</option>
+            <option value="sweep_run">SweepRun – Aho-Corasick + densification</option>
+            <option value="fuzzy_search">FuzzySearch – Myers bit-parallel approximate</option>
           </select>
         </div>
 
-        <!-- Max errors (TierMatch only) -->
+        
         <div class="col-md-1" id="fuzzyOptsWrapper" style="display:none !important">
           <label class="form-label" for="max_errors">k&nbsp;errors</label>
           <input type="number" id="max_errors" name="max_errors"
@@ -191,14 +189,14 @@
 
       </div>
 
-      <!-- Inline error box -->
+      
       <div id="searchError" class="alert alert-danger d-flex align-items-center gap-2 d-none mt-3 py-2" role="alert">
         <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
         <span id="searchErrorMsg"></span>
         <button type="button" class="btn-close ms-auto" onclick="clearSearchError()" aria-label="Dismiss"></button>
       </div>
 
-      <!-- Submit -->
+      
       <div class="mt-4 d-flex gap-2 align-items-center">
         <button type="submit" class="btn btn-primary px-4" id="searchBtn">
           <span id="searchBtnIcon" class="bi bi-search me-2"></span><span id="searchBtnLabel">Search</span>
@@ -213,7 +211,6 @@
   </div>
 </div>
 
-<!-- ── Skeleton loader ──────────────────────────────────────────────────────── -->
 <div id="searchSkeleton" class="d-none mb-4">
   <div class="card border-0 shadow-sm p-4">
     <div class="skeleton-progress mb-4">
@@ -229,18 +226,17 @@
   </div>
 </div>
 
-<!-- ── Algorithm reference cards ─────────────────────────────────────────── -->
 <h6 class="fw-bold mb-3" style="color:var(--blue);letter-spacing:.04em;font-size:.78rem;text-transform:uppercase">
   <i class="bi bi-grid-3x2 me-2" style="color:var(--coral)"></i>Available Algorithms
 </h6>
 <div class="row g-3">
   {% set algos = [
-    ('bi-lightning-charge-fill', 'text-coral',  'FlowScan',   'O(n/σ₀)',     'flow-scan',   'LPS failure table with memchr anchor — jumps past dead stretches via SIMD. Best for rare first-character patterns.'),
-    ('bi-skip-forward-fill',     'text-mblue',  'SkipStride', 'O(n/(m+1))', 'skip-stride', 'Triple-heuristic skip search with Sunday bonus — skips one extra byte per window. Fastest for natural language.'),
-    ('bi-hash',                  'text-mblue',  'TwinHash',   'O(n+m) avg', 'twin-hash',   'Dual rolling hash with 10⁻¹⁸ false-positive rate. Near-zero verification calls on large texts.'),
-    ('bi-toggles',               'text-coral',  'BitAnchor',  'O(n)',        'bit-anchor',  'Bit-parallel NFA with dead-state memchr skip. 64-bit parallelism for patterns up to 64 bytes.'),
-    ('bi-diagram-3-fill',        'text-mblue',  'WebScan',    'O(n)',        'web-scan',    'DFA automaton with 256-bit presence bitmap — bypasses table lookups for non-pattern bytes.'),
-    ('bi-search-heart-fill',     'text-coral',  'TierMatch',  'O(n·k)',      'tier-match',  'Approximate NFA search with best-tier dedup — one result per position at the lowest edit distance.'),
+    ('bi-lightning-charge-fill', 'text-coral',  'DNAScan',     'O(n/σ₀)',     'dna-scan',     'Bigram anchor + bidirectional LPS — jumps past dead stretches via SIMD. Best for DNA/binary and rare bigram patterns.'),
+    ('bi-skip-forward-fill',     'text-mblue',  'GapJump',     'O(n/(m+1))', 'gap-jump',     '2-gram bad-character table + Sunday bonus — skips one extra byte per window. Fastest for natural language.'),
+    ('bi-hash',                  'text-mblue',  'DualRabin',   'O(n+m) avg', 'dual-rabin',   '4-layer hierarchical hash filter with 10⁻²² false-positive rate. Near-zero verification calls on large texts.'),
+    ('bi-toggles',               'text-coral',  'BitMatch',    'O(n)',        'bit-match',    'Bidirectional NFA bit-parallel around internal anchor. 64-bit parallelism for patterns up to 64 bytes.'),
+    ('bi-diagram-3-fill',        'text-mblue',  'SweepRun',    'O(n)',        'sweep-run',    'True Aho-Corasick DFA with densification + presence bitmap — bypasses table lookups for non-pattern bytes.'),
+    ('bi-search-heart-fill',     'text-coral',  'FuzzySearch', 'O(n·k)',      'fuzzy-search', 'Myers bit-parallel approximate search with best-tier dedup — one result per position at lowest edit distance.'),
   ] %}
   {% for icon, color, name, complexity, slug, desc in algos %}
   <div class="col-md-4">
@@ -303,7 +299,7 @@ function toggleAlgoSelect() {
 function toggleFuzzyOpts() {
   const algo = document.getElementById('algorithm').value;
   document.getElementById('fuzzyOptsWrapper').style.setProperty(
-    'display', algo === 'tier_match' ? 'block' : 'none', 'important'
+    'display', algo === 'fuzzy_search' ? 'block' : 'none', 'important'
   );
 }
 
@@ -441,8 +437,8 @@ document.getElementById('searchForm').addEventListener('submit', function (e) {
   if (!prefill) return;
   sessionStorage.removeItem('apme_prefill_alg');
   const map = {
-    'flow-scan': 'flow_scan', 'skip-stride': 'skip_stride', 'twin-hash': 'twin_hash',
-    'bit-anchor': 'bit_anchor', 'web-scan': 'web_scan', 'tier-match': 'tier_match',
+    'dna-scan': 'dna_scan', 'gap-jump': 'gap_jump', 'dual-rabin': 'dual_rabin',
+    'bit-match': 'bit_match', 'sweep-run': 'sweep_run', 'fuzzy-search': 'fuzzy_search',
   };
   const val = map[prefill];
   if (!val) return;

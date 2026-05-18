@@ -1,5 +1,3 @@
-"""Promote a user to admin role by email."""
-
 from pymongo import MongoClient
 
 MONGO_URI = "mongodb://localhost:27017/"

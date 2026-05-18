@@ -3,7 +3,6 @@
 
 {% block content %}
 
-<!-- ── Welcome hero ──────────────────────────────────────────────────────────── -->
 <div class="dash-welcome mb-4">
   <div class="d-flex align-items-center gap-3 flex-wrap">
     <div>
@@ -24,10 +23,9 @@
   </div>
 </div>
 
-<!-- ── Action cards grid ─────────────────────────────────────────────────────── -->
 <div class="row g-4 mb-5">
 
-  <!-- Search Engine — primary -->
+  
   <div class="col-md-6 col-xl-4">
     <a href="{{ url_for('search.search_tool') }}" class="text-decoration-none">
       <div class="action-card primary-action h-100">
@@ -48,7 +46,7 @@
     </a>
   </div>
 
-  <!-- Search History -->
+  
   <div class="col-md-6 col-xl-4">
     <a href="{{ url_for('search.history') }}" class="text-decoration-none">
       <div class="action-card h-100">
@@ -69,7 +67,7 @@
     </a>
   </div>
 
-  <!-- Statistics -->
+  
   <div class="col-md-6 col-xl-4">
     <a href="{{ url_for('search.statistics') }}" class="text-decoration-none">
       <div class="action-card h-100">
@@ -91,7 +89,7 @@
   </div>
 
   {% if current_user.is_admin %}
-  <!-- Admin Dashboard -->
+  
   <div class="col-md-6 col-xl-4">
     <a href="{{ url_for('admin.dashboard') }}" class="text-decoration-none">
       <div class="action-card h-100" style="border-color:rgba(234,179,8,.35)">
@@ -113,7 +111,7 @@
   </div>
   {% endif %}
 
-  <!-- Batch Search shortcut -->
+  
   <div class="col-md-6 col-xl-4">
     <a href="{{ url_for('search.search_tool') }}#batch-tab" class="text-decoration-none">
       <div class="action-card h-100">
@@ -134,7 +132,7 @@
     </a>
   </div>
 
-  <!-- Account / Logout -->
+  
   <div class="col-md-6 col-xl-4">
     <div class="action-card h-100">
       <div class="action-icon">
@@ -155,7 +153,6 @@
 
 </div>
 
-<!-- ── Algorithm quick-reference ─────────────────────────────────────────────── -->
 <div class="mb-3">
   <h5 class="fw-bold" style="color:var(--slate)">
     <i class="bi bi-cpu me-2 text-primary"></i>Algorithm Reference
@@ -165,12 +162,12 @@
 
 <div class="row g-3 mb-4">
   {% set ref_algos = [
-    ("FlowScan",   "flow-scan",   "#3B82F6", "bi-arrow-right-circle",  "LPS table + memchr anchor",            "O(n/σ₀) best",    "Exact · Linear"),
-    ("SkipStride", "skip-stride", "#EE6C4D", "bi-skip-forward-circle", "BC + GS + Sunday bonus shift",         "O(n/(m+1)) best", "Exact · Sub-linear"),
-    ("TwinHash",   "twin-hash",   "#10B981", "bi-hash",                "Dual rolling hash",                    "O(n+m) avg",      "Exact · Dual-hash"),
-    ("BitAnchor",  "bit-anchor",  "#6366F1", "bi-toggles",             "NFA bit-parallel + dead-state skip",   "O(n) · m ≤ 64",   "Exact · Bit-parallel"),
-    ("WebScan",    "web-scan",    "#0EA5E9", "bi-diagram-3",           "DFA + 256-bit presence bitmap",        "O(n) search",     "Multi-pattern"),
-    ("TierMatch",  "tier-match",  "#F97316", "bi-layers",              "k-error Bitap + best-tier dedup",      "O(n·k)",          "Approximate"),
+    ("DNAScan",     "dna-scan",     "#3B82F6", "bi-arrow-right-circle",  "Bigram anchor + bidirectional LPS",        "O(n/σ₀) best",    "Exact · Linear"),
+    ("GapJump",     "gap-jump",     "#EE6C4D", "bi-skip-forward-circle", "2-gram BC table + GS + Sunday bonus",      "O(n/(m+1)) best", "Exact · Sub-linear"),
+    ("DualRabin",   "dual-rabin",   "#10B981", "bi-hash",                "4-layer hierarchical hash + SSE2",         "O(n+m) avg",      "Exact · Dual-hash"),
+    ("BitMatch",    "bit-match",    "#6366F1", "bi-toggles",             "Bidirectional NFA bit-parallel + anchor",  "O(n) · m ≤ 64",   "Exact · Bit-parallel"),
+    ("SweepRun",    "sweep-run",    "#0EA5E9", "bi-diagram-3",           "Aho-Corasick + densification + bitmap",    "O(n) search",     "Multi-pattern"),
+    ("FuzzySearch", "fuzzy-search", "#F97316", "bi-layers",              "Myers bit-parallel + best-tier dedup",     "O(n·k)",          "Approximate"),
   ] %}
   {% for name, slug, color, icon, note, complexity, tag in ref_algos %}
   <div class="col-sm-6 col-lg-4">

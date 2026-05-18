@@ -1,10 +1,3 @@
-"""
-Search Blueprint
-================
-Core search functionality: file upload, text input, algorithm selection,
-result display, history, and the comparison benchmark mode.
-"""
-
 import os
 import shutil
 import uuid
@@ -19,91 +12,92 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from ..database import get_db
-from src.engine import APMEEngine
+from src.python_wrapper import APMEEngine
 
 search_bp = Blueprint("search", __name__)
 _engine   = APMEEngine()
 
-_MAX_ZIP_SIZE    = 50_000_000  # 50 MB per member
+_MAX_ZIP_SIZE    = 50_000_000
 _MAX_ZIP_MEMBERS = 50
 
 _ALGO_DATA = {
-    "flow-scan": {
-        "name": "FlowScan", "slug": "flow-scan",
+    "dna-scan": {
+        "name": "DNAScan", "slug": "dna-scan",
         "colour": "#3D5A80", "tag": "Linear · Exact · APME",
         "summary": (
-            "FlowScan is APME's linear exact-match algorithm. It scans left-to-right and never "
-            "backtracks in the text. An LPS failure table is built at preprocessing time, but when "
-            "no active match thread exists, FlowScan calls memchr to jump directly to the next "
-            "occurrence of pattern[0] — skipping dead stretches in a single SIMD-accelerated call."
+            "DNAScan is APME's linear exact-match algorithm. It selects an adaptive bigram anchor "
+            "— the rarest two-byte pair in the pattern — then scans bidirectionally from every "
+            "anchor hit. An LPS failure table handles the left half; the right half advances "
+            "normally. When no active match thread exists, DNAScan calls memchr on the bigram "
+            "to jump directly past dead stretches in a single SIMD-accelerated call."
         ),
-        "best_for": "Repetitive text, small alphabets (binary/DNA), and any pattern where the first character is rare in the corpus.",
+        "best_for": "Repetitive text, small alphabets (binary/DNA), and any pattern where a rare bigram anchor can be identified.",
         "steps": [
+            "Select the adaptive bigram anchor: the two-byte pair in the pattern with the lowest corpus frequency.",
             "Compute the LPS (longest proper prefix-suffix) table for the pattern in O(m).",
-            "Use memchr to locate the first occurrence of pattern[0] in the text — skipping directly past non-starting bytes.",
-            "Compare left-to-right from that anchor. On match, advance both pointers.",
-            "On mismatch at pattern position j > 0, use LPS[j-1] to shift — the text pointer never retreats.",
-            "When the full pattern is consumed, record the match and continue via the LPS table.",
+            "Use memchr on the bigram to locate the next anchor hit — skipping past non-starting byte-pairs.",
+            "From each anchor, compare bidirectionally (left via LPS, right forward). On mismatch, shift via LPS.",
+            "When the full pattern is consumed, record the match and continue searching.",
         ],
         "complexity": [
-            {"case": "Best",    "time": "O(n / σ₀)", "note": "σ₀ = frequency of pattern[0]"},
+            {"case": "Best",    "time": "O(n / σ₀)", "note": "σ₀ = bigram frequency in corpus"},
             {"case": "Average", "time": "O(n + m)",  "note": "Normal text"},
             {"case": "Worst",   "time": "O(n + m)",  "note": "Periodic patterns"},
             {"case": "Space",   "time": "O(m)",      "note": "LPS table only"},
         ],
         "notes": [
-            "The memchr anchor is the APME optimisation — it exploits SIMD inside libc.",
-            "Best-case improves from O(n) to O(n/σ₀) via the memchr anchor optimisation.",
-            "Fully O(n+m) worst-case; never degrades on adversarial inputs.",
+            "The adaptive bigram anchor is the APME optimisation — rarer than any single-byte anchor.",
+            "Best-case improves when the bigram is rare; never degrades on adversarial inputs.",
+            "Fully O(n+m) worst-case guarantee.",
         ],
     },
-    "skip-stride": {
-        "name": "SkipStride", "slug": "skip-stride",
+    "gap-jump": {
+        "name": "GapJump", "slug": "gap-jump",
         "colour": "#EE6C4D", "tag": "Sub-linear · Exact · APME",
         "summary": (
-            "SkipStride applies three complementary mismatch skip heuristics — Bad Character, "
-            "Good Suffix, and a Sunday bonus — to skip large portions of the text on every mismatch. "
-            "After a mismatch, SkipStride inspects the byte immediately beyond the current window "
-            "— text[s + pat_len]. If that byte is absent from the pattern, the entire window plus "
-            "one extra position is skipped in a single stride: shift = max(BC, GS, Sunday)."
+            "GapJump extends Boyer-Moore with a 2-gram bad-character table of 65,536 byte-pair "
+            "entries. Where classic BM consults a single-byte table (256 entries), GapJump looks "
+            "up the last two bytes of the mismatched window, producing larger skip distances on "
+            "every mismatch. A Sunday bonus shift further inspects the byte beyond the window, "
+            "yielding shift = max(BC2, GS, Sunday) — guaranteed ≥ 1."
         ),
         "best_for": "Natural language and source code with long patterns and a diverse character set.",
         "steps": [
-            "Precompute the Bad Character table: for each byte c, record its rightmost position in the pattern.",
+            "Precompute the 2-gram Bad Character table: for each byte-pair (b1,b2), record the rightmost position in the pattern.",
             "Precompute the Good Suffix table: for each mismatch suffix, record the safe shift distance.",
             "Align the pattern and compare right-to-left.",
-            "On mismatch, compute BC shift and GS shift, then inspect text[s + pat_len] for the Sunday bonus shift.",
-            "Advance by max(BC, GS, Sunday) — guaranteed ≥ 1.",
+            "On mismatch, compute BC2 shift and GS shift, then inspect text[s + pat_len] for the Sunday bonus shift.",
+            "Advance by max(BC2, GS, Sunday) — guaranteed ≥ 1.",
         ],
         "complexity": [
             {"case": "Best",    "time": "O(n / (m+1))", "note": "Sunday shift adds 1 extra byte"},
             {"case": "Average", "time": "O(n)",         "note": "Natural language"},
             {"case": "Worst",   "time": "O(n)",         "note": "GS table prevents quadratic"},
-            {"case": "Space",   "time": "O(m + σ)",     "note": "σ = alphabet size"},
+            {"case": "Space",   "time": "O(m + σ)",     "note": "65,536-entry 2-gram table"},
         ],
         "notes": [
-            "The Sunday bonus shift is the APME optimisation — one extra byte skipped per window on average.",
-            "Best case improves from O(n/m) to O(n/(m+1)) with the Sunday bonus shift.",
+            "The 2-gram bad-character table is the APME optimisation — larger skips than single-byte BM.",
+            "65,536 entries fit in L1 cache on modern CPUs; lookup cost is identical to classic BM.",
             "GS table prevents the quadratic worst case of Bad-Character-only implementations.",
         ],
     },
-    "twin-hash": {
-        "name": "TwinHash", "slug": "twin-hash",
+    "dual-rabin": {
+        "name": "DualRabin", "slug": "dual-rabin",
         "colour": "#98C1D9", "tag": "Dual Hash · Exact · APME",
         "summary": (
-            "TwinHash maintains TWO independent rolling polynomial hashes in parallel. "
-            "Single-hash rolling search requires O(m) character verification on every collision. "
-            "TwinHash only triggers verification when BOTH hashes agree simultaneously, "
-            "reducing the false-positive rate from ≈ 10⁻⁹ to ≈ 10⁻¹⁸ — making spurious "
-            "verifications practically impossible for any realistic workload."
+            "DualRabin maintains a four-layer hierarchical filter before any character-level "
+            "verification. Layer 1 is a byte-sum pre-filter; layers 2–3 are two independent "
+            "rolling polynomial hashes; layer 4 is a final SSE2-accelerated byte comparison. "
+            "A window must pass all four layers before a match is reported, reducing the "
+            "false-positive probability from ≈ 10⁻⁹ (single hash) to ≈ 10⁻²²."
         ),
-        "best_for": "Multi-pattern search, plagiarism detection, and short patterns in very large texts.",
+        "best_for": "Short patterns in very large texts, plagiarism detection, and workloads requiring near-zero verification overhead.",
         "steps": [
-            "Choose two independent (base, modulus) pairs: (256, 10⁹+7) and (31, 998244353).",
-            "Compute initial pattern hashes pat_h1, pat_h2 and window hashes win_h1, win_h2.",
-            "On each window slide, update both hashes in O(1) using the rolling formula.",
-            "Only verify character-by-character when BOTH win_h1 == pat_h1 AND win_h2 == pat_h2.",
-            "Record the match and continue sliding.",
+            "Compute pattern byte-sum S and initial window byte-sum — O(m) setup.",
+            "Choose two independent (base, modulus) pairs and compute pattern hashes h1, h2.",
+            "On each window slide: update byte-sum O(1); reject if sum ≠ S (layer 1).",
+            "Update both rolling hashes O(1); reject if either hash mismatches (layers 2–3).",
+            "Only on all-pass: run SSE2 byte comparison (layer 4) and record match.",
         ],
         "complexity": [
             {"case": "Best",    "time": "O(n + m)",          "note": "No false positives"},
@@ -112,58 +106,58 @@ _ALGO_DATA = {
             {"case": "Space",   "time": "O(1)",              "note": "Excluding output"},
         ],
         "notes": [
-            "The dual hash is the APME optimisation — collision prob drops to ≈ 10⁻¹⁸.",
-            "Verification cost doubles hash computation per slide but eliminates O(m) checks.",
+            "The 4-layer hierarchical filter + SSE2 is the APME optimisation — collision prob ≈ 10⁻²².",
+            "Byte-sum pre-filter (layer 1) eliminates most windows with zero hash computation.",
             "NTT-friendly second modulus (998244353) is a standard choice in competitive programming.",
         ],
     },
-    "bit-anchor": {
-        "name": "BitAnchor", "slug": "bit-anchor",
+    "bit-match": {
+        "name": "BitMatch", "slug": "bit-match",
         "colour": "#293241", "tag": "Bit-Parallel · Exact · APME",
         "summary": (
-            "BitAnchor uses NFA bit-parallelism to encode pattern positions into 64-bit integers. "
-            "When the NFA state drops to zero (no active match threads), the standard approach "
-            "still advances one byte at a time. BitAnchor detects this dead state and immediately "
-            "calls memchr to jump to the next occurrence of pattern[0], exploiting SIMD acceleration "
-            "to skip large stretches with no active match threads."
+            "BitMatch runs two NFA bitvectors simultaneously around an internal anchor — the "
+            "rarest byte inside the pattern. The left NFA scans backward from the anchor; the "
+            "right NFA scans forward. Both are encoded into 64-bit integers for branch-free "
+            "updates. When both NFAs drop to the dead state, memchr jumps to the next anchor "
+            "occurrence, exploiting SIMD acceleration to skip large dead stretches."
         ),
-        "best_for": "Short ASCII patterns (m ≤ 64) with a rare leading byte; high-throughput log scanning.",
+        "best_for": "Short ASCII patterns (m ≤ 64) with a rare internal byte; high-throughput log scanning.",
         "steps": [
-            "Build the D[c] bitmask table: bit j is set iff pattern[j] == c.",
-            "Initialise NFA state vector to 0 (no active threads).",
-            "When state == 0, use memchr to jump to the next occurrence of pattern[0] in the remaining text.",
-            "Update state = ((state << 1) | 1) & D[text[i]] for each byte at the anchor and beyond.",
-            "When the match bit (bit m-1) is set, record the match position.",
+            "Identify the internal anchor: the rarest byte inside the pattern.",
+            "Build D_left[c] and D_right[c] bitmask tables for the left and right NFA halves.",
+            "When both NFA states == 0, use memchr to jump to the next anchor occurrence.",
+            "Update left NFA (scanning backward) and right NFA (scanning forward) simultaneously.",
+            "When the match bits of both NFAs are set at the anchor, record the match position.",
         ],
         "complexity": [
             {"case": "Best",    "time": "O(n)",       "note": "Dead-state skips dominate"},
-            {"case": "Average", "time": "O(n)",       "note": "Single-word NFA"},
+            {"case": "Average", "time": "O(n)",       "note": "Single-word NFA per direction"},
             {"case": "Worst",   "time": "O(n·⌈m/64⌉)", "note": "m > 64 bytes"},
-            {"case": "Space",   "time": "O(σ)",       "note": "256 64-bit masks"},
+            {"case": "Space",   "time": "O(σ)",       "note": "256 × 2 64-bit masks"},
         ],
         "notes": [
-            "The dead-state memchr skip is the APME optimisation.",
-            "Patterns > 64 bytes fall back to FlowScan automatically.",
-            "UTF-8 safe: multi-byte sequences are treated as independent byte runs.",
+            "The bidirectional NFA around an internal anchor is the APME optimisation.",
+            "Internal anchor is rarer than pattern[0], producing longer dead-state skips.",
+            "Patterns > 64 bytes fall back to DNAScan automatically.",
         ],
     },
-    "web-scan": {
-        "name": "WebScan", "slug": "web-scan",
+    "sweep-run": {
+        "name": "SweepRun", "slug": "sweep-run",
         "colour": "#5b7fa3", "tag": "Multi-Pattern · Automaton · APME",
         "summary": (
-            "WebScan adds a 256-bit character presence bitmap to its DFA automaton. "
-            "Before each state transition, a single bitwise AND tests whether the current "
-            "byte can appear in any pattern. If not, the automaton resets to the root state "
-            "with no table access — saving the memory load and potential cache miss for every "
-            "byte that is absent from the pattern character set."
+            "SweepRun builds a true Aho-Corasick DFA and applies three structural optimisations: "
+            "(1) densification — hot states are expanded into full 256-entry arrays for O(1) "
+            "lookup; (2) a 256-bit presence bitmap that bypasses the DFA entirely for bytes "
+            "absent from all patterns; (3) output propagation — failure links carry match sets "
+            "so every match at any failure ancestor is reported without extra traversal."
         ),
-        "best_for": "Multi-pattern keyword spotting in mixed natural-language and code text.",
+        "best_for": "Multi-pattern keyword spotting in IDS/IPS, log analysis, and mixed natural-language and code text.",
         "steps": [
             "Insert all patterns into a trie and compute BFS failure links to build a complete DFA.",
+            "Densify hot states: expand states with high hit-count into full 256-entry arrays.",
             "Build a 256-bit presence bitmap: bit c is set iff byte c appears in any pattern.",
-            "For each text byte, test the presence bitmap first with a single AND operation.",
-            "If the byte is absent, reset to the root state immediately — no DFA table access.",
-            "If present, follow the DFA transition and emit any matches at the new state.",
+            "For each text byte, test the presence bitmap first; reset to root if absent.",
+            "Follow the DFA transition and emit all matches via propagated output sets.",
         ],
         "complexity": [
             {"case": "Best",    "time": "O(n + m·σ)", "note": "Presence check dominant"},
@@ -172,56 +166,49 @@ _ALGO_DATA = {
             {"case": "Space",   "time": "O((m+1)·σ) + 32 bytes", "note": "DFA + bitmap"},
         ],
         "notes": [
-            "The 256-bit presence bitmap (4 × uint64) is the APME optimisation.",
-            "Saves a DFA table access for every byte absent from all patterns — typically the majority.",
-            "Used in keyword spotting and network packet inspection pipelines.",
+            "Densification + presence bitmap + output propagation are the three APME optimisations.",
+            "Presence bitmap saves a DFA lookup for every byte absent from all patterns — typically the majority.",
+            "Used in IDS/IPS keyword spotting and network packet inspection pipelines.",
         ],
     },
-    "tier-match": {
-        "name": "TierMatch", "slug": "tier-match",
-        "colour": "#f0956a", "tag": "Approximate · Best-Tier · APME",
+    "fuzzy-search": {
+        "name": "FuzzySearch", "slug": "fuzzy-search",
+        "colour": "#f0956a", "tag": "Approximate · Myers · APME",
         "summary": (
-            "TierMatch is APME's approximate matching algorithm. It maintains k+1 NFA bitvectors "
-            "simultaneously — one per error level — and adds best-tier deduplication: the standard "
-            "approach emits a match for every error level d=0..k that fires at the same position, "
-            "cluttering results with redundant near-duplicate entries. TierMatch scans d=0 upward "
-            "after each NFA step: the first tier that fires is recorded, then the accept bit in all "
-            "higher tiers is cleared — at most one result per text position at the lowest error count."
+            "FuzzySearch implements Myers bit-parallel approximate matching (JACM 1999) with "
+            "best-tier deduplication. It maintains k+1 NFA bitvectors simultaneously — one per "
+            "error level. After each NFA step, FuzzySearch scans d=0 upward: the first tier that "
+            "fires is recorded and the accept bit in all higher tiers is cleared, ensuring at most "
+            "one result per text position at the lowest edit distance. For m > 64, it falls back "
+            "to the multi-word Myers variant rather than naive DP."
         ),
         "best_for": "Typo-tolerant search, OCR post-processing, and ranked fuzzy pipelines that expect one result per position.",
         "steps": [
-            "Build the D[c] bitmask table and k+1 NFA state bitvectors R[0]…R[k].",
-            "For each text byte, save old state vectors and update all k+1 layers (exact match, substitution, insert, delete).",
+            "Build the D[c] bitmask table and k+1 NFA state bitvectors R[0]…R[k] (Myers encoding).",
+            "For each text byte, update all k+1 layers using the Myers recurrence (substitution, insert, delete).",
             "Scan d = 0, 1, …, k: find the first tier d where R[d] has the accept bit set.",
             "Record one match at the best tier; clear the accept bit in R[d+1]…R[k] to suppress duplicates.",
-            "Patterns > 64 bytes fall back to the Levenshtein DP path, which is naturally position-unique.",
+            "For m > 64, use the multi-word Myers variant (64-bit words chained) instead of DP.",
         ],
         "complexity": [
             {"case": "Best",    "time": "O(n · k)",    "note": "k = max errors"},
             {"case": "Average", "time": "O(n · k)",    "note": "Linear per error level"},
-            {"case": "Worst",   "time": "O(n · m)",    "note": "DP fallback for m > 64"},
-            {"case": "Space",   "time": "O(k + σ) / O(m)", "note": "Bitap / DP path"},
+            {"case": "Worst",   "time": "O(n · ⌈m/64⌉ · k)", "note": "Multi-word Myers for m > 64"},
+            {"case": "Space",   "time": "O(k + σ)  /  O(⌈m/64⌉)", "note": "Bitap / multi-word path"},
         ],
         "notes": [
-            "Best-tier deduplication is the APME optimisation — one result per position.",
-            "k=0 reduces exactly to BitAnchor exact mode.",
+            "Myers bit-parallel + best-tier dedup is the APME optimisation — one result per position.",
+            "k=0 reduces exactly to BitMatch exact mode.",
             "Setting k too high produces overwhelming false positives; k ≤ 3 is practical.",
         ],
     },
 }
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _allowed(filename: str) -> bool:
     allowed = current_app.config.get("ALLOWED_EXTENSIONS", set())
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed
 
-
 def _save_to_history(result, source: str, user_id: str) -> str:
-    """Persist search metadata to MongoDB and return the search _id string."""
     db  = get_db()
     doc = {
         "user_id":         ObjectId(user_id),
@@ -240,13 +227,11 @@ def _save_to_history(result, source: str, user_id: str) -> str:
     }
     inserted = db.search_history.insert_one(doc)
 
-    # Increment per-user counter
     db.users.update_one(
         {"_id": ObjectId(user_id)},
         {"$inc": {"search_count": 1}},
     )
 
-    # Detailed performance log (for admin analytics)
     db.performance_log.insert_one({
         "search_id":       str(inserted.inserted_id),
         "algorithm":       result.algorithm,
@@ -260,29 +245,21 @@ def _save_to_history(result, source: str, user_id: str) -> str:
 
     return str(inserted.inserted_id)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Routes
-# ─────────────────────────────────────────────────────────────────────────────
-
 @search_bp.route("/")
 def index():
     if current_user.is_authenticated:
         return redirect(url_for("search.dashboard"))
     return render_template("landing.html")
 
-
 @search_bp.route("/dashboard")
 @login_required
 def dashboard():
     return render_template("dashboard.html")
 
-
 @search_bp.route("/tool")
 @login_required
 def search_tool():
     return render_template("index.html")
-
 
 @search_bp.route("/search", methods=["POST"])
 @login_required
@@ -303,7 +280,6 @@ def run_search():
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
     file_obj   = request.files.get("file")
 
-    # ── Path A: file upload ───────────────────────────────────────────────
     if file_obj and file_obj.filename:
         if not _allowed(file_obj.filename):
             flash("File type not supported.  Use .txt .log .csv .md .json .xml .py .js", "danger")
@@ -327,7 +303,6 @@ def run_search():
 
         source = file_obj.filename
 
-    # ── Path B: direct text input ─────────────────────────────────────────
     elif text_input:
         try:
             result = _engine.search(
@@ -355,14 +330,9 @@ def run_search():
         source=source,
     )
 
-
 @search_bp.route("/compare", methods=["POST"])
 @login_required
 def compare():
-    """
-    Run all three algorithms on the submitted text and return JSON metrics.
-    Called by the Compare button on the results page via fetch().
-    """
     text    = request.json.get("text", "")
     pattern = request.json.get("pattern", "")
 
@@ -382,7 +352,6 @@ def compare():
         for algo, r in comparison.items()
     }
     return jsonify(payload)
-
 
 @search_bp.route("/batch", methods=["POST"])
 @login_required
@@ -477,9 +446,7 @@ def run_batch_search():
         pattern=pattern,
     )
 
-
 def _safe_extract_zip(zf: _zipfile.ZipFile, extract_dir: Path) -> list[tuple[str, Path]]:
-    """Extract text files from a ZIP, guarding against zip-slip and size bombs."""
     allowed = current_app.config.get("ALLOWED_EXTENSIONS", set())
     items: list[tuple[str, Path]] = []
     count = 0
@@ -500,7 +467,6 @@ def _safe_extract_zip(zf: _zipfile.ZipFile, extract_dir: Path) -> list[tuple[str
         count += 1
     return items
 
-
 @search_bp.route("/algorithm/<slug>")
 @login_required
 def algorithm_detail(slug: str):
@@ -513,7 +479,6 @@ def algorithm_detail(slug: str):
         all_algos=list(_ALGO_DATA.values()),
     )
 
-
 @search_bp.route("/history")
 @login_required
 def history():
@@ -524,16 +489,13 @@ def history():
         .sort("timestamp", -1)
         .limit(50)
     )
-    # Stringify ObjectIds for Jinja2
     for doc in raw:
         doc["_id"]     = str(doc["_id"])
         doc["user_id"] = str(doc["user_id"])
 
     return render_template("history.html", searches=raw)
 
-
 def _calc_streak(date_strings):
-    """Return the current consecutive-day streak from a desc-sorted list of YYYY-MM-DD strings."""
     if not date_strings:
         return 0
     from datetime import date
@@ -550,51 +512,44 @@ def _calc_streak(date_strings):
             break
     return streak
 
-
 @search_bp.route("/statistics")
 @login_required
 def statistics():
     return render_template("statistics.html")
 
-
 _ALGO_DISPLAY_MAP = {
-    # Internal enum values
-    "flow_scan":   "FlowScan",
-    "skip_stride": "SkipStride",
-    "twin_hash":   "TwinHash",
-    "bit_anchor":  "BitAnchor",
-    "web_scan":    "WebScan",
-    "tier_match":  "TierMatch",
-    # Old classic display names (stored before APME renaming)
-    "kmp":                       "FlowScan",
-    "kmp (knuth-morris-pratt)":  "FlowScan",
-    "knuth-morris-pratt":        "FlowScan",
-    "flowscan":                  "FlowScan",
-    "boyer-moore":               "SkipStride",
-    "boyer moore":               "SkipStride",
-    "skipstride":                "SkipStride",
-    "rabin-karp":                "TwinHash",
-    "rabin karp":                "TwinHash",
-    "twinhash":                  "TwinHash",
-    "shift-or":                  "BitAnchor",
-    "shift or":                  "BitAnchor",
-    "bitap":                     "BitAnchor",
-    "bitanchor":                 "BitAnchor",
-    "aho-corasick":              "WebScan",
-    "aho corasick":              "WebScan",
-    "webscan":                   "WebScan",
-    "fuzzy":                     "TierMatch",
-    "wu-manber":                 "TierMatch",
-    "tiermatch":                 "TierMatch",
+    "dna_scan":    "DNAScan",
+    "gap_jump":    "GapJump",
+    "dual_rabin":  "DualRabin",
+    "bit_match":   "BitMatch",
+    "sweep_run":   "SweepRun",
+    "fuzzy_search": "FuzzySearch",
+    "kmp":                       "DNAScan",
+    "kmp (knuth-morris-pratt)":  "DNAScan",
+    "knuth-morris-pratt":        "DNAScan",
+    "dnascan":                   "DNAScan",
+    "boyer-moore":               "GapJump",
+    "boyer moore":               "GapJump",
+    "gapjump":                   "GapJump",
+    "rabin-karp":                "DualRabin",
+    "rabin karp":                "DualRabin",
+    "dualrabin":                 "DualRabin",
+    "shift-or":                  "BitMatch",
+    "shift or":                  "BitMatch",
+    "bitap":                     "BitMatch",
+    "bitmatch":                  "BitMatch",
+    "aho-corasick":              "SweepRun",
+    "aho corasick":              "SweepRun",
+    "sweeprun":                  "SweepRun",
+    "fuzzy":                     "FuzzySearch",
+    "wu-manber":                 "FuzzySearch",
+    "fuzzysearch":               "FuzzySearch",
 }
 
-
 def _normalize_algo(name: str | None) -> str:
-    """Return the canonical APME display name for any stored algorithm value."""
     if not name:
         return "Unknown"
     return _ALGO_DISPLAY_MAP.get(name.lower(), name)
-
 
 @search_bp.route("/api/statistics")
 @login_required
@@ -604,7 +559,6 @@ def api_statistics():
     now = datetime.utcnow()
     seven_ago = now - timedelta(days=7)
 
-    # Total searches + avg pattern length
     totals_raw = list(db.search_history.aggregate([
         {"$match": {"user_id": uid}},
         {"$group": {
@@ -616,8 +570,6 @@ def api_statistics():
     total_searches = totals_raw[0]["total"] if totals_raw else 0
     avg_pattern_len = round(totals_raw[0]["avg_pattern_len"] or 0, 1) if totals_raw else 0
 
-    # Algorithm distribution — prefer algorithm_display, fall back to algorithm
-    # for any records that pre-date the algorithm_display field.
     alg_dist = list(db.search_history.aggregate([
         {"$match": {"user_id": uid}},
         {"$addFields": {
@@ -628,7 +580,6 @@ def api_statistics():
     ]))
     most_used_alg = _normalize_algo(alg_dist[0]["_id"]) if alg_dist else "—"
 
-    # 7-day activity (fill missing days with 0)
     activity_raw = list(db.search_history.aggregate([
         {"$match": {"user_id": uid, "timestamp": {"$gte": seven_ago}}},
         {"$group": {
@@ -640,7 +591,6 @@ def api_statistics():
     activity_labels = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6, -1, -1)]
     activity_counts = [activity_map.get(d, 0) for d in activity_labels]
 
-    # Input method split
     input_split_raw = list(db.search_history.aggregate([
         {"$match": {"user_id": uid}},
         {"$project": {
@@ -653,7 +603,6 @@ def api_statistics():
     input_map = {doc["_id"]: doc["count"] for doc in input_split_raw}
     preferred_input = max(input_map, key=input_map.get) if input_map else "—"
 
-    # Activity streak
     all_dates_raw = list(db.search_history.aggregate([
         {"$match": {"user_id": uid}},
         {"$group": {"_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}}}},
