@@ -21,7 +21,7 @@ my-project/
 │   │   ├── tiermatch.c         TierMatch  — k-error Bitap + dedup      O(n·k)
 │   │   └── Makefile
 │   │
-│   ├── engine/                 Python orchestration layer
+│   ├── python_wrapper/         Python orchestration layer
 │   │   ├── heuristics.py       Rule-based algorithm selector
 │   │   ├── c_bindings.py       ctypes wrappers for the C library
 │   │   └── apme.py             APMEEngine class (search / search_file / compare)
@@ -39,7 +39,7 @@ my-project/
 │   └── APME_Technical_Justification.md   Heuristic decision rationale
 │
 ├── build.py          Cross-platform C compiler script
-├── run.py            Flask development server entry point
+├── app.py            Flask development server entry point
 ├── requirements.txt  Python dependencies
 ├── Makefile          Convenience targets
 └── .env.example      Environment variable template
@@ -94,7 +94,7 @@ mongod --dbpath /data/db
 ### 6. Run
 
 ```bash
-python run.py
+python app.py
 # or: make run
 ```
 
