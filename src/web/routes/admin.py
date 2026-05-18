@@ -9,12 +9,12 @@ from ..database import get_db
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 _ALGO_DISPLAY = {
-    "flow_scan":   "FlowScan",
-    "skip_stride": "SkipStride",
-    "twin_hash":   "TwinHash",
-    "bit_anchor":  "BitAnchor",
-    "web_scan":    "WebScan",
-    "tier_match":  "TierMatch",
+    "dna_scan":     "DNAScan",
+    "gap_jump":     "GapJump",
+    "dual_rabin":   "DualRabin",
+    "bit_match":    "BitMatch",
+    "sweep_run":    "SweepRun",
+    "fuzzy_search": "FuzzySearch",
 }
 
 def admin_required(f):

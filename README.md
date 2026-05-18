@@ -13,12 +13,12 @@ my-project/
 ├── src/
 │   ├── c_backend/              C algorithm implementations + shared library
 │   │   ├── algorithms.h        Public header (shared interface)
-│   │   ├── flowscan.c          FlowScan   — KMP + memchr anchor        O(n/σ₀) best
-│   │   ├── skipstride.c        SkipStride — BM + Sunday bonus shift    O(n/(m+1)) best
-│   │   ├── twinhash.c          TwinHash   — dual rolling hash          O(n+m) avg
-│   │   ├── bitanchor.c         BitAnchor  — bit-parallel NFA + skip    O(n) / m≤64
-│   │   ├── webscan.c           WebScan    — Aho-Corasick + bitmap       O(n)
-│   │   ├── tiermatch.c         TierMatch  — k-error Bitap + dedup      O(n·k)
+│   │   ├── flowscan.c          DNAScan    — KMP + memchr anchor        O(n/σ₀) best
+│   │   ├── skipstride.c        GapJump    — BM + Sunday bonus shift    O(n/(m+1)) best
+│   │   ├── twinhash.c          DualRabin  — dual rolling hash          O(n+m) avg
+│   │   ├── bitanchor.c         BitMatch   — bit-parallel NFA + skip    O(n) / m≤64
+│   │   ├── webscan.c           SweepRun   — Aho-Corasick + bitmap       O(n)
+│   │   ├── tiermatch.c         FuzzySearch — k-error Bitap + dedup     O(n·k)
 │   │   └── Makefile
 │   │
 │   ├── python_wrapper/         Python orchestration layer
@@ -81,7 +81,7 @@ python build.py
 # or: make build
 ```
 
-> **No GCC?** The app falls back to a pure-Python FlowScan implementation automatically.
+> **No GCC?** The app falls back to a pure-Python DNAScan implementation automatically.
 
 ### 5. Start MongoDB
 
@@ -118,42 +118,42 @@ python promote_admin.py
 APME ships six proprietary string-matching algorithms, each a tuned variant of a
 classic base algorithm with an APME-specific optimisation.
 
-### FlowScan
+### DNAScan
 - Base: Knuth-Morris-Pratt (KMP) with **memchr first-character anchor**
 - When no partial match is alive, jumps directly to the next occurrence of
   `pattern[0]` via SIMD-accelerated `memchr` — skipping dead stretches entirely
 - Complexity: O(n/σ₀) best · O(n+m) worst · O(m) space
 - **Best for:** small alphabets (binary/DNA), repetitive text, short patterns (m ≤ 2)
 
-### SkipStride
+### GapJump
 - Base: Boyer-Moore (Bad Character + Good Suffix) with **Sunday bonus shift**
 - After BC and GS, inspects the byte immediately beyond the current window; if
   absent from the pattern, skips the entire window + 1 in one stride
 - Complexity: O(n/(m+1)) best · O(n) worst · O(m+σ) space
 - **Best for:** natural language, source code, long patterns, large alphabets
 
-### TwinHash
+### DualRabin
 - Base: Rabin-Karp with **dual independent rolling hashes**
 - Maintains two parallel polynomial hashes; character verification only when both
   agree simultaneously — false-positive probability ≈ 10⁻¹⁸
 - Complexity: O(n+m) average · O(1) space
 - **Best for:** short patterns in very large texts, fingerprinting
 
-### BitAnchor
+### BitMatch
 - Base: Shift-Or / Bitap (64-bit NFA) with **dead-state memchr skip**
 - When NFA state drops to zero (no active threads), jumps to the next `pattern[0]`
   via `memchr` instead of advancing one byte at a time
 - Complexity: O(n) for m ≤ 64 · O(σ) space
 - **Best for:** short ASCII patterns with a rare leading byte, log scanning
 
-### WebScan
+### SweepRun
 - Base: Aho-Corasick DFA with **256-bit character presence bitmap**
 - Before each DFA transition, tests whether the byte exists in the pattern's
   character set; non-pattern bytes reset to root with no table lookup
 - Complexity: O(n) search · O((m+1)·σ) space
 - **Best for:** multi-pattern search, keyword spotting in mixed text
 
-### TierMatch
+### FuzzySearch
 - Base: Wu-Manber k-error Bitap with **best-tier deduplication**
 - Scans error tiers 0→k; the first tier whose accept bit fires is recorded and
   higher-tier duplicates at the same position are suppressed immediately
@@ -164,14 +164,14 @@ classic base algorithm with an APME-specific optimisation.
 
 | Priority | Condition | Algorithm |
 |----------|-----------|-----------|
-| 1 | m ≤ 2 | FlowScan |
-| 2 | m ≤ 64 and ASCII-only pattern | BitAnchor |
-| 3 | Multiple patterns | WebScan |
-| 4 | Alphabet cardinality σ ≤ 4 (binary/DNA) | FlowScan |
-| 5 | Text repetitiveness > 70 % | FlowScan |
-| 6 | m > 10 and σ > 10 and n > 5 000 | SkipStride |
-| 7 | m ≤ 10 and n > 100 000 | TwinHash |
-| 8 | Default | SkipStride |
+| 1 | m ≤ 2 | DNAScan |
+| 2 | m ≤ 64 and ASCII-only pattern | BitMatch |
+| 3 | Multiple patterns | SweepRun |
+| 4 | Alphabet cardinality σ ≤ 4 (binary/DNA) | DNAScan |
+| 5 | Text repetitiveness > 70 % | DNAScan |
+| 6 | m > 10 and σ > 10 and n > 5 000 | GapJump |
+| 7 | m ≤ 10 and n > 100 000 | DualRabin |
+| 8 | Default | GapJump |
 
 See [`docs/APME_Technical_Justification.md`](docs/APME_Technical_Justification.md)
 for the full mathematical justification.

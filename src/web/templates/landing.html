@@ -56,7 +56,7 @@
           </div>
           <div class="code-line">
             &nbsp;&nbsp;<span class="cl-op">→</span> algo<span class="cl-op">:</span>
-            <span class="cl-str">"<span class="scan-match sm2">SkipStride</span>"</span>
+            <span class="cl-str">"<span class="scan-match sm2">GapJump</span>"</span>
           </div>
           <div class="code-line">
             &nbsp;&nbsp;<span class="cl-op">→</span> matches<span class="cl-op">:</span>
@@ -181,48 +181,48 @@
                   <tr>
                     <td class="fw-semibold text-muted">2</td>
                     <td>Pattern length m ≤ 2</td>
-                    <td><span class="badge badge-flow-scan">FlowScan</span></td>
+                    <td><span class="badge badge-dna-scan">DNAScan</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">2.5</td>
                     <td>m ≤ 64 and ASCII-only pattern</td>
-                    <td><span class="badge badge-bit-anchor">BitAnchor</span></td>
+                    <td><span class="badge badge-bit-match">BitMatch</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">3</td>
                     <td>More than 1 pattern</td>
-                    <td><span class="badge badge-web-scan">WebScan</span></td>
+                    <td><span class="badge badge-sweep-run">SweepRun</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">4</td>
                     <td>Alphabet cardinality σ ≤ 4 (binary/DNA)</td>
-                    <td><span class="badge badge-flow-scan">FlowScan</span></td>
+                    <td><span class="badge badge-dna-scan">DNAScan</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">5</td>
                     <td>Repetitiveness ratio &gt; 70%</td>
-                    <td><span class="badge badge-flow-scan">FlowScan</span></td>
+                    <td><span class="badge badge-dna-scan">DNAScan</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">6</td>
                     <td>m &gt; 10 and σ &gt; 10 and n &gt; 5,000</td>
-                    <td><span class="badge badge-skip-stride">SkipStride</span></td>
+                    <td><span class="badge badge-gap-jump">GapJump</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">7</td>
                     <td>m ≤ 10 and n &gt; 100,000</td>
-                    <td><span class="badge badge-twin-hash">TwinHash</span></td>
+                    <td><span class="badge badge-dual-rabin">DualRabin</span></td>
                   </tr>
                   <tr>
                     <td class="fw-semibold text-muted">8</td>
                     <td>Default (general text)</td>
-                    <td><span class="badge badge-skip-stride">SkipStride</span></td>
+                    <td><span class="badge badge-gap-jump">GapJump</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <p class="text-muted small text-center mt-2">
-              TierMatch (approximate) and WebScan (multi-pattern) are also available as manual selections.
+              FuzzySearch (approximate) and SweepRun (multi-pattern) are also available as manual selections.
             </p>
           </div>
         </div>
@@ -232,12 +232,12 @@
       <div class="tab-pane fade" id="pane-algos" role="tabpanel">
         <div class="row g-3">
           {% set algo_cards = [
-            ("FlowScan",   "flow_scan",   "bi-arrow-right-circle",  "#3B82F6", "Bigram anchor + bidirectional LPS. Adaptive anchor skips dead stretches via SIMD. Best for DNA/binary.", "O(n/σ₀) best · O(n+m) worst"),
-            ("SkipStride", "skip_stride", "bi-skip-forward-circle", "#EE6C4D", "2-gram Bad Character + Good Suffix + Sunday bonus shift. Sub-linear on natural language and source code.", "O(n/(m+1)) best · O(n) worst"),
-            ("TwinHash",   "twin_hash",   "bi-hash",                "#10B981", "4-layer hierarchical hash filter + SSE2. False-positive probability ≈ 10⁻²² — near-zero verifications.", "O(n+m) avg · O(1) space"),
-            ("BitAnchor",  "bit_anchor",  "bi-toggles",             "#6366F1", "Bidirectional NFA bit-parallelism around internal anchor. memchr jumps to next anchor on dead state.", "O(n) · m ≤ 64 bytes"),
-            ("WebScan",    "web_scan",    "bi-diagram-3",           "#0EA5E9", "True Aho-Corasick DFA + densification + 256-bit presence bitmap. Bypasses DFA for non-pattern bytes.", "O(n) search · multi-pattern"),
-            ("TierMatch",  "tier_match",  "bi-layers",              "#F97316", "Myers bit-parallel k-error search with best-tier dedup. One result per position at lowest error count.", "O(n·k) · approximate"),
+            ("DNAScan",     "dna_scan",     "bi-arrow-right-circle",  "#3B82F6", "Bigram anchor + bidirectional LPS. Adaptive anchor skips dead stretches via SIMD. Best for DNA/binary.", "O(n/σ₀) best · O(n+m) worst"),
+            ("GapJump",     "gap_jump",     "bi-skip-forward-circle", "#EE6C4D", "2-gram Bad Character + Good Suffix + Sunday bonus shift. Sub-linear on natural language and source code.", "O(n/(m+1)) best · O(n) worst"),
+            ("DualRabin",   "dual_rabin",   "bi-hash",                "#10B981", "4-layer hierarchical hash filter + SSE2. False-positive probability ≈ 10⁻²² — near-zero verifications.", "O(n+m) avg · O(1) space"),
+            ("BitMatch",    "bit_match",    "bi-toggles",             "#6366F1", "Bidirectional NFA bit-parallelism around internal anchor. memchr jumps to next anchor on dead state.", "O(n) · m ≤ 64 bytes"),
+            ("SweepRun",    "sweep_run",    "bi-diagram-3",           "#0EA5E9", "True Aho-Corasick DFA + densification + 256-bit presence bitmap. Bypasses DFA for non-pattern bytes.", "O(n) search · multi-pattern"),
+            ("FuzzySearch", "fuzzy_search", "bi-layers",              "#F97316", "Myers bit-parallel k-error search with best-tier dedup. One result per position at lowest error count.", "O(n·k) · approximate"),
           ] %}
           {% for name, slug, icon, color, desc, complexity in algo_cards %}
           <div class="col-md-6 col-lg-4">
@@ -307,7 +307,7 @@
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['FlowScan','SkipStride','TwinHash','BitAnchor','WebScan','TierMatch'],
+      labels: ['DNAScan','GapJump','DualRabin','BitMatch','SweepRun','FuzzySearch'],
       datasets: [{
         label: 'Best-case score (higher = faster)',
         data: [72, 95, 78, 88, 85, 55],
@@ -337,17 +337,17 @@
       labels: ['Speed','Worst-case','Memory','Multi-pattern','Approx match','Short patterns'],
       datasets: [
         {
-          label: 'SkipStride',
+          label: 'GapJump',
           data: [95, 80, 75, 20, 0, 60],
           borderColor: '#EE6C4D', backgroundColor: 'rgba(238,108,77,.12)', pointBackgroundColor: '#EE6C4D',
         },
         {
-          label: 'BitAnchor',
+          label: 'BitMatch',
           data: [88, 90, 70, 30, 0, 95],
           borderColor: '#6366F1', backgroundColor: 'rgba(99,102,241,.12)', pointBackgroundColor: '#6366F1',
         },
         {
-          label: 'TierMatch',
+          label: 'FuzzySearch',
           data: [55, 70, 65, 40, 100, 80],
           borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,.12)', pointBackgroundColor: '#F97316',
         },
