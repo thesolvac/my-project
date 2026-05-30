@@ -1,10 +1,26 @@
+/* ===========================================================================
+ * tiermatch.c  —  FuzzySearch approximate (k-difference) matching
+ * ---------------------------------------------------------------------------
+ * Project-book design (SWOT 8.6, bibliography): Wu-Manber bitap for m<=64 and
+ * Myers bit-parallel dynamic programming (G. Myers, JACM 1999) for m>64,
+ * replacing the O(n*m) naive DP. The Myers path encodes the column's
+ * vertical deltas in VP/VN bit-vectors and, for m>64, uses the multi-word
+ * block formulation with K = ceil(m/64) words and horizontal-carry
+ * propagation between words, giving O(n * ceil(m/64)).
+ *
+ * Both paths share one reporting convention — for each text end position i
+ * whose best edit distance is <= max_errors, the match start max(0, i-m+1) is
+ * reported once. (The legacy DP reported the end index i, which the display
+ * layer then discarded near end-of-text; Myers is made consistent with the
+ * bitap path here.) max_errors stays capped at 5; the signature is unchanged.
+ * =========================================================================== */
 #include "algorithms.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define TM_BITAP_MAX   64   
-#define TM_MAX_ERRORS   5   
+#define TM_BITAP_MAX   64
+#define TM_MAX_ERRORS   5
 
 static int bitap_tiermatch(const char *text,    int text_len,
                            const char *pattern, int pat_len,
@@ -62,41 +78,79 @@ static int bitap_tiermatch(const char *text,    int text_len,
     return count;
 }
 
-static int dp_tiermatch(const char *text,    int text_len,
-                        const char *pattern, int pat_len,
-                        int         max_err,
-                        int        *positions, int max_res) {
-    int *dp   = (int *)malloc((size_t)(pat_len + 1) * sizeof(int));
-    int *prev = (int *)malloc((size_t)(pat_len + 1) * sizeof(int));
-    if (!dp || !prev) { free(dp); free(prev); return -1; }
+/* Myers bit-parallel DP (JACM 1999), multi-word block version for m > 64.
+ * VP/VN hold the column's vertical deltas; horizontal carries (hin/hout in
+ * {-1,0,+1}) propagate between the K = ceil(m/64) words. The running `score`
+ * tracks D[m][i] (bottom-right cell) via the bottom-row horizontal delta,
+ * which lives in the last word at bit (m-1) mod 64. */
+static int myers_tiermatch(const char *text,    int text_len,
+                           const char *pattern, int pat_len,
+                           int         max_err,
+                           int        *positions, int max_res) {
+    int K = (pat_len + 63) / 64;
 
-    
-    for (int j = 0; j <= pat_len; j++) dp[j] = j;
+    uint64_t *Peq = (uint64_t *)calloc((size_t)256 * K, sizeof(uint64_t));
+    uint64_t *VP  = (uint64_t *)malloc((size_t)K * sizeof(uint64_t));
+    uint64_t *VN  = (uint64_t *)malloc((size_t)K * sizeof(uint64_t));
+    if (!Peq || !VP || !VN) { free(Peq); free(VP); free(VN); return -1; }
 
+    for (int j = 0; j < pat_len; j++)
+        Peq[(size_t)(unsigned char)pattern[j] * K + (j >> 6)]
+            |= (uint64_t)1 << (j & 63);
+
+    for (int b = 0; b < K; b++) { VP[b] = ~(uint64_t)0; VN[b] = 0; }
+
+    const int      lb          = K - 1;                         /* last word */
+    const uint64_t bottom_mask = (uint64_t)1 << ((pat_len - 1) & 63);
+    const uint64_t TOP_BIT     = (uint64_t)1 << 63;
+
+    int score = pat_len;        /* D[m][-1] = m */
     int count = 0;
 
     for (int i = 0; i < text_len; i++) {
-        memcpy(prev, dp, (size_t)(pat_len + 1) * sizeof(int));
-        dp[0] = 0;  
+        const uint64_t *Prow = Peq + (size_t)(unsigned char)text[i] * K;
+        int hin = 0;            /* free-start search: 0 horizontal carry into word 0 */
 
-        for (int j = 1; j <= pat_len; j++) {
-            int cost = (text[i] == pattern[j - 1]) ? 0 : 1;
-            int sub  = prev[j - 1] + cost;
-            int del  = prev[j]     + 1;
-            int ins  = dp[j - 1]   + 1;
-            dp[j] = sub < del ? sub : del;
-            if (ins < dp[j]) dp[j] = ins;
+        for (int b = 0; b < K; b++) {
+            uint64_t Eq  = Prow[b];
+            uint64_t Pvb = VP[b], Mvb = VN[b];
+            uint64_t Xv  = Eq | Mvb;
+            if (hin < 0) Eq |= (uint64_t)1;
+
+            uint64_t Xh = (((Eq & Pvb) + Pvb) ^ Pvb) | Eq;
+            uint64_t Ph = Mvb | ~(Xh | Pvb);
+            uint64_t Mh = Pvb & Xh;
+
+            int hout;
+            if (b == lb) {                       /* bottom row → update score */
+                if      (Ph & bottom_mask) score += 1;
+                else if (Mh & bottom_mask) score -= 1;
+                hout = 0;
+            } else {                             /* inter-word horizontal carry */
+                hout = (Ph & TOP_BIT) ? 1 : ((Mh & TOP_BIT) ? -1 : 0);
+            }
+
+            Ph <<= 1;
+            Mh <<= 1;
+            if      (hin < 0) Mh |= (uint64_t)1;
+            else if (hin > 0) Ph |= (uint64_t)1;
+
+            VP[b] = Mh | ~(Xv | Ph);
+            VN[b] = Ph & Xv;
+            hin   = hout;
         }
 
-        if (dp[pat_len] <= max_err) {
-            if (count < max_res)
-                positions[count] = i;
+        if (score <= max_err) {
+            int pos = i - pat_len + 1;
+            if (pos < 0) pos = 0;
+            if (count < max_res) positions[count] = pos;
             count++;
         }
     }
 
-    free(dp);
-    free(prev);
+    free(Peq);
+    free(VP);
+    free(VN);
     return count;
 }
 
@@ -112,6 +166,6 @@ int tiermatch_search(const char *text,    int text_len,
         return bitap_tiermatch(text, text_len, pattern, pat_len,
                                max_errors, positions, max_res);
     else
-        return dp_tiermatch(text, text_len, pattern, pat_len,
-                            max_errors, positions, max_res);
+        return myers_tiermatch(text, text_len, pattern, pat_len,
+                               max_errors, positions, max_res);
 }
