@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import math
+from collections import Counter
+from dataclasses import dataclass, field
 from enum import Enum
 
 class Algorithm(str, Enum):
@@ -27,6 +29,9 @@ class HeuristicResult:
     algorithm:     Algorithm
     justification: str
     complexity:    dict[str, str]
+    # full per-algorithm score vector (algorithm value → 0..10); empty for
+    # manual selections. Added by the §21.3.3 score-based selector.
+    scores:        dict[str, int] = field(default_factory=dict)
 
 COMPLEXITY: dict[Algorithm, dict[str, str]] = {
     Algorithm.DNA_SCAN: {
@@ -85,11 +90,180 @@ def _repetitiveness(text: str) -> float:
     top_freq = max(sample.count(c) for c in set(sample))
     return top_freq / len(sample)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Score-based selection (project book §§9.5, 21.3.3)
+#
+# The legacy if-else cascade is replaced by a feature-vector + scoring model.
+# Each algorithm carries ten boolean predicates over the extracted features;
+# an algorithm's score is the number of predicates it satisfies (0..10). Among
+# the *eligible* algorithms the highest score wins, ties broken by the legacy
+# §9.5 cascade precedence. This keeps the book's per-algorithm reasoning while
+# producing a smooth, inspectable score instead of brittle first-match rules.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class _Features:
+    m:                int     # pattern length
+    n:                int     # text length
+    k:                int     # max edit errors (0 ⇒ exact search)
+    num_patterns:     int
+    sigma:            int     # σ  — alphabet cardinality of the text sample
+    repetition:       float   # R  — fraction of the most common sample char
+    sigma_bigram:     int     # σ_pair — distinct adjacent byte-pairs in sample
+    h_pattern:        float   # H  — Shannon entropy (bits) of the pattern
+    is_ascii_pattern: bool
+    is_ascii_text:    bool
+
+def _extract_features(
+    text: str, pattern: str, num_patterns: int, max_errors: int
+) -> _Features:
+    sample = text[:_SAMPLE_CAP]
+    if sample:
+        counts   = Counter(sample)
+        sigma    = len(counts)
+        rep      = max(counts.values()) / len(sample)
+        sigma_bg = len({sample[i:i + 2] for i in range(len(sample) - 1)})
+        ascii_t  = sample.isascii()
+    else:
+        sigma, rep, sigma_bg, ascii_t = 0, 0.0, 0, True
+
+    if pattern:
+        plen  = len(pattern)
+        h_pat = -sum((c / plen) * math.log2(c / plen)
+                     for c in Counter(pattern).values())
+    else:
+        h_pat = 0.0
+
+    return _Features(
+        m=len(pattern), n=len(text), k=max(0, max_errors),
+        num_patterns=num_patterns, sigma=sigma, repetition=rep,
+        sigma_bigram=sigma_bg, h_pattern=h_pat,
+        is_ascii_pattern=pattern.isascii(), is_ascii_text=ascii_t,
+    )
+
+# Ten predicates per algorithm. Each entry is (label, predicate); the count of
+# satisfied predicates is the score, and the labels feed the justification.
+_ALGORITHM_RULES: dict[Algorithm, list[tuple[str, object]]] = {
+    # DNAScan — O(n+m) guarantee; shines on tiny patterns, tiny/repetitive
+    # alphabets, and rare-bigram-anchor opportunities.
+    Algorithm.DNA_SCAN: [
+        ("m≤2",                 lambda f: f.m <= 2),
+        ("m≤4",                 lambda f: f.m <= 4),
+        ("σ≤4",                 lambda f: f.sigma <= 4),
+        ("σ≤8",                 lambda f: f.sigma <= 8),
+        ("R>0.70",              lambda f: f.repetition > 0.70),
+        ("R>0.50",              lambda f: f.repetition > 0.50),
+        ("σ_pair≤16",           lambda f: f.sigma_bigram <= 16),
+        ("H_pattern<1.5",       lambda f: f.h_pattern < 1.5),
+        ("large & small-σ",     lambda f: f.n > 50_000 and f.sigma <= 4),
+        ("ascii text & σ≤6",    lambda f: f.is_ascii_text and f.sigma <= 6),
+    ],
+    # GapJump — Boyer-Moore + 2-gram bad-character; best on medium/long
+    # patterns over large, diverse alphabets (natural language, source code).
+    Algorithm.GAP_JUMP: [
+        ("m>10",                lambda f: f.m > 10),
+        ("m>4",                 lambda f: f.m > 4),
+        ("σ>10",                lambda f: f.sigma > 10),
+        ("σ>4",                 lambda f: f.sigma > 4),
+        ("n>5000",              lambda f: f.n > 5_000),
+        ("n>1000",              lambda f: f.n > 1_000),
+        ("σ_pair>64",           lambda f: f.sigma_bigram > 64),
+        ("H_pattern>2.0",       lambda f: f.h_pattern > 2.0),
+        ("low repetition",      lambda f: f.repetition <= 0.50),
+        ("ascii text & σ>10",   lambda f: f.is_ascii_text and f.sigma > 10),
+    ],
+    # DualRabin — 4-layer rolling hash; wins on short-to-medium patterns over
+    # very large text where Boyer-Moore skips shrink.
+    Algorithm.DUAL_RABIN: [
+        ("m≤10",                lambda f: f.m <= 10),
+        ("m≤16",                lambda f: f.m <= 16),
+        ("n>100000",            lambda f: f.n > 100_000),
+        ("n>20000",             lambda f: f.n > 20_000),
+        ("σ>8",                 lambda f: f.sigma > 8),
+        ("H_pattern>1.5",       lambda f: f.h_pattern > 1.5),
+        ("m≥3",                 lambda f: f.m >= 3),
+        ("n>5000 & m≤12",       lambda f: f.n > 5_000 and f.m <= 12),
+        ("σ_pair>32",           lambda f: f.sigma_bigram > 32),
+        ("ascii text & n>50000", lambda f: f.is_ascii_text and f.n > 50_000),
+    ],
+    # BitMatch — bidirectional bit-parallel NFA; short ASCII exact patterns,
+    # O(n) and branchless. (Template per §21.3.3.)
+    Algorithm.BIT_MATCH: [
+        ("m≤64",                lambda f: f.m <= 64),
+        ("ascii pattern",       lambda f: f.is_ascii_pattern),
+        ("m≤32",                lambda f: f.m <= 32),
+        ("m≤16",                lambda f: f.m <= 16),
+        ("m>2",                 lambda f: f.m > 2),
+        ("σ>4",                 lambda f: f.sigma > 4),
+        ("n>1000",              lambda f: f.n > 1_000),
+        ("R<0.70",              lambda f: f.repetition < 0.70),
+        ("σ_pair>16",           lambda f: f.sigma_bigram > 16),
+        ("H_pattern>1.0",       lambda f: f.h_pattern > 1.0),
+    ],
+    # SweepRun — Aho-Corasick; only meaningful for multiple patterns, so every
+    # predicate is gated on num_patterns>1 (score 0 for a single pattern).
+    Algorithm.SWEEP_RUN: [
+        ("multi-pattern",       lambda f: f.num_patterns > 1),
+        ("patterns>2",          lambda f: f.num_patterns > 2),
+        ("patterns>4",          lambda f: f.num_patterns > 4),
+        ("patterns>8",          lambda f: f.num_patterns > 8),
+        ("multi & n>1000",      lambda f: f.num_patterns > 1 and f.n > 1_000),
+        ("multi & n>10000",     lambda f: f.num_patterns > 1 and f.n > 10_000),
+        ("multi & n>5000",      lambda f: f.num_patterns > 1 and f.n > 5_000),
+        ("multi & ascii text",  lambda f: f.num_patterns > 1 and f.is_ascii_text),
+        ("multi & σ≤64",        lambda f: f.num_patterns > 1 and f.sigma <= 64),
+        ("multi & m≤32",        lambda f: f.num_patterns > 1 and f.m <= 32),
+    ],
+    # FuzzySearch — approximate matching; only eligible when k>0, scored on the
+    # difficulty of the approximate search.
+    Algorithm.FUZZY_SEARCH: [
+        ("k>0",                 lambda f: f.k > 0),
+        ("k≥2",                 lambda f: f.k >= 2),
+        ("k≥3",                 lambda f: f.k >= 3),
+        ("m≤64 (bitap)",        lambda f: f.m <= 64),
+        ("m>64 (Myers)",        lambda f: f.m > 64),
+        ("m≥4",                 lambda f: f.m >= 4),
+        ("n>1000",              lambda f: f.n > 1_000),
+        ("σ>4",                 lambda f: f.sigma > 4),
+        ("ascii pattern",       lambda f: f.is_ascii_pattern),
+        ("k≤5 (capped)",        lambda f: 0 < f.k <= 5),
+    ],
+}
+
+def _is_eligible(algo: Algorithm, f: _Features) -> bool:
+    if algo == Algorithm.BIT_MATCH:
+        return f.m <= 64 and f.is_ascii_pattern and f.k == 0
+    if algo == Algorithm.FUZZY_SEARCH:
+        return f.k > 0
+    # the remaining four exact matchers only handle k == 0
+    return f.k == 0
+
+# Legacy §9.5 cascade precedence (first-match order) used to break score ties.
+_TIE_BREAK_ORDER: list[Algorithm] = [
+    Algorithm.DNA_SCAN,
+    Algorithm.BIT_MATCH,
+    Algorithm.SWEEP_RUN,
+    Algorithm.GAP_JUMP,
+    Algorithm.DUAL_RABIN,
+    Algorithm.FUZZY_SEARCH,
+]
+
+def _tie_break(tied: list[Algorithm]) -> Algorithm:
+    for algo in _TIE_BREAK_ORDER:
+        if algo in tied:
+            return algo
+    return tied[0]
+
+def _score(algo: Algorithm, f: _Features) -> tuple[int, list[str]]:
+    passed = [label for label, pred in _ALGORITHM_RULES[algo] if pred(f)]
+    return len(passed), passed
+
 def select_algorithm(
     text:         str,
     pattern:      str,
     num_patterns: int = 1,
     manual:       str | None = None,
+    max_errors:   int = 0,
 ) -> HeuristicResult:
 
     if manual:
@@ -103,113 +277,42 @@ def select_algorithm(
             complexity=COMPLEXITY[algo],
         )
 
-    m = len(pattern)
-    n = len(text)
+    f = _extract_features(text, pattern, num_patterns, max_errors)
 
-    if m <= 2:
-        return HeuristicResult(
-            algorithm=Algorithm.DNA_SCAN,
-            justification=(
-                f"Pattern length m={m} ≤ 2.  GapJump and DualRabin "
-                "preprocessing tables (O(m + σ) and O(m)) add overhead that "
-                "cannot be recovered on such a short pattern.  DNAScan requires "
-                "only an O(m) LPS table and is optimal here."
-            ),
-            complexity=COMPLEXITY[Algorithm.DNA_SCAN],
-        )
+    scores:       dict[str, int]            = {}
+    passed_rules: dict[Algorithm, list[str]] = {}
+    eligible:     list[Algorithm]           = []
+    for algo in Algorithm:
+        sc, passed         = _score(algo, f)
+        scores[algo.value] = sc
+        passed_rules[algo] = passed
+        if _is_eligible(algo, f):
+            eligible.append(algo)
 
-    if m <= 64 and pattern.isascii():
-        return HeuristicResult(
-            algorithm=Algorithm.BIT_MATCH,
-            justification=(
-                f"Pattern length m={m} ≤ 64 and pattern is ASCII-only.  "
-                "BitMatch encodes two NFA bitvectors around an internal anchor "
-                "into 64-bit integers, achieving O(n) search with no branching "
-                "and excellent cache behaviour.  When the NFA drops to the dead "
-                "state, memchr fast-forwards to the next anchor occurrence."
-            ),
-            complexity=COMPLEXITY[Algorithm.BIT_MATCH],
-        )
+    if not eligible:                       # defensive — should never trigger
+        eligible = [Algorithm.GAP_JUMP]
 
-    if num_patterns > 1:
-        return HeuristicResult(
-            algorithm=Algorithm.SWEEP_RUN,
-            justification=(
-                f"{num_patterns} patterns detected.  SweepRun builds a "
-                "true Aho-Corasick DFA over all patterns in O(m·σ) time, "
-                "then scans the text once in O(n) — reporting every match for "
-                "every pattern simultaneously.  Densification and the 256-bit "
-                "presence bitmap further bypass DFA lookups for bytes absent "
-                "from all patterns."
-            ),
-            complexity=COMPLEXITY[Algorithm.SWEEP_RUN],
-        )
+    best   = max(scores[a.value] for a in eligible)
+    tied   = [a for a in eligible if scores[a.value] == best]
+    winner = tied[0] if len(tied) == 1 else _tie_break(tied)
 
-    sigma = _alphabet_size(text)
-    rep   = _repetitiveness(text)
+    tie_note = ""
+    if len(tied) > 1:
+        names = ", ".join(a.display_name() for a in tied)
+        tie_note = (f"  Tie at {best}/10 among [{names}]; resolved to "
+                    f"{winner.display_name()} by §9.5 cascade precedence.")
 
-    if sigma <= 4:
-        return HeuristicResult(
-            algorithm=Algorithm.DNA_SCAN,
-            justification=(
-                f"Alphabet cardinality σ={sigma} ≤ 4 (binary or DNA-like text).  "
-                "GapJump's 2-gram Bad Character skip distance is bounded by σ², so "
-                "with only 4 distinct characters the average skip ≈ 1 and "
-                "worst-case degrades to O(n·m).  DNAScan's O(n+m) guarantee "
-                "is strictly better here, and the bigram anchor exploits rare "
-                "byte-pair occurrences when available."
-            ),
-            complexity=COMPLEXITY[Algorithm.DNA_SCAN],
-        )
-
-    if rep > 0.70:
-        return HeuristicResult(
-            algorithm=Algorithm.DNA_SCAN,
-            justification=(
-                f"Text repetitiveness = {rep:.0%} (>{70}% same character).  "
-                "Repetitive text is GapJump's worst-case trigger: mismatches "
-                "are rare, bad-char skips are tiny, and runtime approaches O(n·m).  "
-                "DNAScan's LPS-driven backtrack avoidance keeps time strictly O(n+m)."
-            ),
-            complexity=COMPLEXITY[Algorithm.DNA_SCAN],
-        )
-
-    if m > 10 and sigma > 10 and n > 5_000:
-        return HeuristicResult(
-            algorithm=Algorithm.GAP_JUMP,
-            justification=(
-                f"m={m} > 10, σ={sigma} > 10, n={n:,} > 5 000.  "
-                "GapJump's 2-gram Bad Character rule yields an average skip of "
-                f"≈ m·(1 − 1/σ) ≈ {m * (1 - 1/sigma):.1f} characters per step.  "
-                "The Sunday bonus shift inspects the byte past the window, "
-                "pushing the best case to O(n/(m+1)) — fastest for natural-language "
-                "or source-code text."
-            ),
-            complexity=COMPLEXITY[Algorithm.GAP_JUMP],
-        )
-
-    if m <= 10 and n > 100_000:
-        return HeuristicResult(
-            algorithm=Algorithm.DUAL_RABIN,
-            justification=(
-                f"m={m} ≤ 10 with large text n={n:,} > 100 000.  "
-                "Short patterns offer GapJump little skip distance "
-                f"(avg skip ≈ m/σ ≈ {m/sigma:.2f}).  DualRabin's O(1) "
-                "4-layer rolling hash update maintains high throughput; the "
-                "hierarchical filter with SSE2 acceleration drops false-positive "
-                "probability to ≈ 10⁻²², eliminating verification overhead entirely."
-            ),
-            complexity=COMPLEXITY[Algorithm.DUAL_RABIN],
-        )
+    rules = ", ".join(passed_rules[winner]) or "none"
+    justification = (
+        f"{winner.display_name()} selected with score {best}/10 "
+        f"(σ={f.sigma}, R={f.repetition:.0%}, σ_pair={f.sigma_bigram}, "
+        f"H={f.h_pattern:.2f}, m={f.m}, n={f.n:,}, k={f.k}, "
+        f"patterns={f.num_patterns}).  Rules passed: [{rules}].{tie_note}"
+    )
 
     return HeuristicResult(
-        algorithm=Algorithm.GAP_JUMP,
-        justification=(
-            "Default selection.  GapJump achieves the best average-case "
-            "performance for general natural-language or mixed text where "
-            "no specific degenerate condition was detected.  The 2-gram "
-            "bad-character table and Sunday bonus shift provide an extra "
-            "stride beyond the classic Boyer-Moore base algorithm."
-        ),
-        complexity=COMPLEXITY[Algorithm.GAP_JUMP],
+        algorithm=winner,
+        justification=justification,
+        complexity=COMPLEXITY[winner],
+        scores=scores,
     )
