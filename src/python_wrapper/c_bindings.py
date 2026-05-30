@@ -53,6 +53,18 @@ def _configure(lib: ctypes.CDLL) -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
     ]
+
+    lib.webscan_search_multi.restype  = ctypes.c_int  # multi-pattern Aho-Corasick
+    lib.webscan_search_multi.argtypes = [
+        ctypes.c_char_p,                       # text
+        ctypes.c_int,                          # text_len
+        ctypes.POINTER(ctypes.c_char_p),       # patterns[]
+        ctypes.POINTER(ctypes.c_int),          # pat_lens[]
+        ctypes.c_int,                          # n_patterns
+        ctypes.POINTER(ctypes.c_int),          # positions[]
+        ctypes.POINTER(ctypes.c_int),          # pattern_ids[]
+        ctypes.c_int,                          # max_res
+    ]
     return lib
 
 _lib: ctypes.CDLL | None = None
@@ -125,6 +137,37 @@ def bitmatch_search(text: str, pattern: str) -> list[int]:
 
 def sweeprun_search(text: str, pattern: str) -> list[int]:
     return _call(_lib.webscan_search, text, pattern)
+
+def sweeprun_search_multi(text: str, patterns: list[str]) -> list[tuple[int, int]]:
+    """Multi-pattern Aho-Corasick search.
+
+    Returns a list of (position, pattern_id) pairs, where pattern_id indexes
+    into ``patterns``. Positions are byte offsets in the UTF-8 encoded text.
+    """
+    if not C_BACKEND_AVAILABLE:
+        raise RuntimeError(
+            f"C backend unavailable – using Python fallback.\nDetails: {_load_error}"
+        )
+    if not text or not patterns:
+        return []
+
+    b_text = text.encode("utf-8")
+    enc    = [p.encode("utf-8") for p in patterns]   # keep alive during the call
+    n      = len(enc)
+
+    arr_pat  = (ctypes.c_char_p * n)(*enc)
+    arr_len  = (ctypes.c_int * n)(*[len(p) for p in enc])
+    pos_buf  = (ctypes.c_int * _MAX_RESULTS)()
+    id_buf   = (ctypes.c_int * _MAX_RESULTS)()
+
+    count = _lib.webscan_search_multi(
+        b_text, len(b_text), arr_pat, arr_len, n, pos_buf, id_buf, _MAX_RESULTS
+    )
+    if count < 0:
+        raise ValueError(
+            "webscan_search_multi returned a negative code – likely a malloc failure."
+        )
+    return list(zip(pos_buf[:count], id_buf[:count]))
 
 def fuzzysearch_search(text: str, pattern: str, max_errors: int = 1) -> list[int]:
     return _call_tiermatch(text, pattern, max_errors)
