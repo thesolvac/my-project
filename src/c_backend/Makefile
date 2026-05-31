@@ -11,7 +11,7 @@
 
 CC     = gcc
 CFLAGS = -O2 -Wall -Wextra -fPIC
-SRC    = flowscan.c skipstride.c twinhash.c bitanchor.c webscan.c tiermatch.c
+SRC    = dnascan.c gapjump.c dualrabin.c bitmatch.c sweeprun.c fuzzysearch.c
 
 # ── Platform detection ────────────────────────────────────────────────────
 ifeq ($(OS), Windows_NT)

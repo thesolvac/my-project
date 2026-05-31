@@ -1,5 +1,5 @@
 /* ===========================================================================
- * tiermatch.c  —  FuzzySearch approximate (k-difference) matching
+ * fuzzysearch.c  —  FuzzySearch approximate (k-difference) matching
  * ---------------------------------------------------------------------------
  * Project-book design (SWOT 8.6, bibliography): Wu-Manber bitap for m<=64 and
  * Myers bit-parallel dynamic programming (G. Myers, JACM 1999) for m>64,
@@ -19,10 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TM_BITAP_MAX   64
-#define TM_MAX_ERRORS   5
+#define FS_BITAP_MAX   64
+#define FS_MAX_ERRORS   5
 
-static int bitap_tiermatch(const char *text,    int text_len,
+static int bitap_fuzzysearch(const char *text,    int text_len,
                            const char *pattern, int pat_len,
                            int         max_err,
                            int        *positions, int max_res) {
@@ -35,8 +35,8 @@ static int bitap_tiermatch(const char *text,    int text_len,
     const uint64_t match_bit = (uint64_t)1 << (pat_len - 1);
 
     
-    uint64_t R[TM_MAX_ERRORS + 1];
-    uint64_t old_R[TM_MAX_ERRORS + 1];
+    uint64_t R[FS_MAX_ERRORS + 1];
+    uint64_t old_R[FS_MAX_ERRORS + 1];
     memset(R, 0, sizeof(uint64_t) * (size_t)(max_err + 1));
 
     int count = 0;
@@ -83,7 +83,7 @@ static int bitap_tiermatch(const char *text,    int text_len,
  * {-1,0,+1}) propagate between the K = ceil(m/64) words. The running `score`
  * tracks D[m][i] (bottom-right cell) via the bottom-row horizontal delta,
  * which lives in the last word at bit (m-1) mod 64. */
-static int myers_tiermatch(const char *text,    int text_len,
+static int myers_fuzzysearch(const char *text,    int text_len,
                            const char *pattern, int pat_len,
                            int         max_err,
                            int        *positions, int max_res) {
@@ -154,18 +154,18 @@ static int myers_tiermatch(const char *text,    int text_len,
     return count;
 }
 
-int tiermatch_search(const char *text,    int text_len,
+int fuzzysearch_search(const char *text,    int text_len,
                      const char *pattern, int pat_len,
                      int         max_errors,
                      int        *positions, int max_res) {
     if (pat_len == 0 || text_len == 0) return 0;
     if (max_errors < 0) max_errors = 0;
-    if (max_errors > TM_MAX_ERRORS) max_errors = TM_MAX_ERRORS;
+    if (max_errors > FS_MAX_ERRORS) max_errors = FS_MAX_ERRORS;
 
-    if (pat_len <= TM_BITAP_MAX)
-        return bitap_tiermatch(text, text_len, pattern, pat_len,
+    if (pat_len <= FS_BITAP_MAX)
+        return bitap_fuzzysearch(text, text_len, pattern, pat_len,
                                max_errors, positions, max_res);
     else
-        return myers_tiermatch(text, text_len, pattern, pat_len,
+        return myers_fuzzysearch(text, text_len, pattern, pat_len,
                                max_errors, positions, max_res);
 }

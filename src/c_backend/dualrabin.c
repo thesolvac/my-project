@@ -1,5 +1,5 @@
 /* ===========================================================================
- * twinhash.c  —  DualRabin exact string matching
+ * dualrabin.c  —  DualRabin exact string matching
  * ---------------------------------------------------------------------------
  * Project-book design (proof 6.7, SWOT 8.3, §6.4): a four-layer hierarchical
  * filter so that the expensive full comparison runs only for very strong
@@ -33,7 +33,7 @@
 #include <emmintrin.h>
 /* 16 bytes per compare; only full aligned-length chunks use SSE so we never
  * read past the candidate window, the tail falls back to a byte loop. */
-static inline int twinhash_verify(const unsigned char *t,
+static inline int dualrabin_verify(const unsigned char *t,
                                   const unsigned char *p, int m) {
     int k = 0;
     for (; k + 16 <= m; k += 16) {
@@ -46,7 +46,7 @@ static inline int twinhash_verify(const unsigned char *t,
     return 1;
 }
 #else
-static inline int twinhash_verify(const unsigned char *t,
+static inline int dualrabin_verify(const unsigned char *t,
                                   const unsigned char *p, int m) {
     for (int k = 0; k < m; k++)
         if (t[k] != p[k]) return 0;
@@ -54,7 +54,7 @@ static inline int twinhash_verify(const unsigned char *t,
 }
 #endif
 
-int twinhash_search(const char *text,    int text_len,
+int dualrabin_search(const char *text,    int text_len,
                     const char *pattern, int pat_len,
                     int *positions,      int max_res) {
     if (pat_len == 0 || text_len == 0 || pat_len > text_len) return 0;
@@ -90,7 +90,7 @@ int twinhash_search(const char *text,    int text_len,
         /* Layer 1 → Layer 2/3 → Layer 4, short-circuited. */
         if (win_sum == pat_sum &&
             win_h1 == pat_h1 && win_h2 == pat_h2 &&
-            twinhash_verify(T + i, P, pat_len)) {
+            dualrabin_verify(T + i, P, pat_len)) {
             if (count < max_res)
                 positions[count++] = i;
         }

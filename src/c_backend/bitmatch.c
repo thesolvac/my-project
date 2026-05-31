@@ -1,5 +1,5 @@
 /* ===========================================================================
- * bitanchor.c  —  BitMatch exact string matching
+ * bitmatch.c  —  BitMatch exact string matching
  * ---------------------------------------------------------------------------
  * Project-book design (SWOT 8.4, data structures §15.3): two bit-parallel
  * NFAs running outward from an internal anchor, replacing the single
@@ -19,21 +19,21 @@
  *   aborting the instant its state goes dead (== 0). On a dead state the scan
  *   memchr-jumps to the next anchor occurrence.
  *
- * The m<=64 ASCII limit and the flowscan_search fallback beyond it are kept
+ * The m<=64 ASCII limit and the dnascan_search fallback beyond it are kept
  * (already book-aligned). Signature is unchanged.
  * =========================================================================== */
 #include "algorithms.h"
 #include <stdint.h>
 #include <string.h>
 
-#define BA_MAX_PATTERN 64
+#define BM_MAX_PATTERN 64
 
-extern int flowscan_search(const char *text,    int text_len,
+extern int dnascan_search(const char *text,    int text_len,
                            const char *pattern, int pat_len,
                            int *positions,      int max_res);
 
 /* Index of the pattern byte rarest in the text sample → fewest memchr hits. */
-static int bitanchor_select_anchor(const unsigned char *pattern, int m,
+static int bitmatch_select_anchor(const unsigned char *pattern, int m,
                                    const unsigned char *sample, int sample_len) {
     long freq[256];
     for (int i = 0; i < 256; i++) freq[i] = 0;
@@ -52,20 +52,20 @@ static int bitanchor_select_anchor(const unsigned char *pattern, int m,
     return best;
 }
 
-int bitanchor_search(const char *text,    int text_len,
+int bitmatch_search(const char *text,    int text_len,
                      const char *pattern, int pat_len,
                      int *positions,      int max_res) {
     if (pat_len == 0 || text_len == 0 || pat_len > text_len) return 0;
 
-    if (pat_len > BA_MAX_PATTERN)
-        return flowscan_search(text, text_len, pattern, pat_len,
+    if (pat_len > BM_MAX_PATTERN)
+        return dnascan_search(text, text_len, pattern, pat_len,
                                positions, max_res);
 
     const unsigned char *T = (const unsigned char *)text;
     const unsigned char *P = (const unsigned char *)pattern;
 
     int sample_len = text_len < 8192 ? text_len : 8192;
-    int a  = bitanchor_select_anchor(P, pat_len, T, sample_len);
+    int a  = bitmatch_select_anchor(P, pat_len, T, sample_len);
     int Ls = pat_len - a;          /* suffix length, >= 1 */
 
     /* forward Shift-And table over the suffix pattern[a .. m-1] */

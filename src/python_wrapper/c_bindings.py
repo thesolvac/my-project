@@ -37,14 +37,14 @@ def _configure(lib: ctypes.CDLL) -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
     ]
-    for name in ("flowscan_search", "skipstride_search", "twinhash_search",
-                 "bitanchor_search", "webscan_search"):
+    for name in ("dnascan_search", "gapjump_search", "dualrabin_search",
+                 "bitmatch_search", "sweeprun_search"):
         fn = getattr(lib, name)
         fn.restype  = ctypes.c_int
         fn.argtypes = _argtypes
 
-    lib.tiermatch_search.restype  = ctypes.c_int  # C function name unchanged
-    lib.tiermatch_search.argtypes = [
+    lib.fuzzysearch_search.restype  = ctypes.c_int  # extra max_errors arg
+    lib.fuzzysearch_search.argtypes = [
         ctypes.c_char_p,
         ctypes.c_int,
         ctypes.c_char_p,
@@ -54,8 +54,8 @@ def _configure(lib: ctypes.CDLL) -> ctypes.CDLL:
         ctypes.c_int,
     ]
 
-    lib.webscan_search_multi.restype  = ctypes.c_int  # multi-pattern Aho-Corasick
-    lib.webscan_search_multi.argtypes = [
+    lib.sweeprun_search_multi.restype  = ctypes.c_int  # multi-pattern Aho-Corasick
+    lib.sweeprun_search_multi.argtypes = [
         ctypes.c_char_p,                       # text
         ctypes.c_int,                          # text_len
         ctypes.POINTER(ctypes.c_char_p),       # patterns[]
@@ -100,7 +100,7 @@ def _call(fn: ctypes.CFUNCTYPE, text: str, pattern: str) -> list[int]:
         )
     return list(buf[:count])
 
-def _call_tiermatch(text: str, pattern: str, max_errors: int) -> list[int]:
+def _call_fuzzysearch(text: str, pattern: str, max_errors: int) -> list[int]:
     if not C_BACKEND_AVAILABLE:
         raise RuntimeError(
             f"C backend unavailable – using Python fallback.\nDetails: {_load_error}"
@@ -113,30 +113,30 @@ def _call_tiermatch(text: str, pattern: str, max_errors: int) -> list[int]:
     buf       = (ctypes.c_int * _MAX_RESULTS)()
     max_errors = max(0, min(5, max_errors))
 
-    count = _lib.tiermatch_search(
+    count = _lib.fuzzysearch_search(
         b_text, len(b_text), b_pattern, len(b_pattern),
         max_errors, buf, _MAX_RESULTS,
     )
     if count < 0:
         raise ValueError(
-            "tiermatch_search returned a negative code – likely a malloc failure."
+            "fuzzysearch_search returned a negative code – likely a malloc failure."
         )
     return list(buf[:count])
 
 def dnascan_search(text: str, pattern: str) -> list[int]:
-    return _call(_lib.flowscan_search, text, pattern)
+    return _call(_lib.dnascan_search, text, pattern)
 
 def gapjump_search(text: str, pattern: str) -> list[int]:
-    return _call(_lib.skipstride_search, text, pattern)
+    return _call(_lib.gapjump_search, text, pattern)
 
 def dualrabin_search(text: str, pattern: str) -> list[int]:
-    return _call(_lib.twinhash_search, text, pattern)
+    return _call(_lib.dualrabin_search, text, pattern)
 
 def bitmatch_search(text: str, pattern: str) -> list[int]:
-    return _call(_lib.bitanchor_search, text, pattern)
+    return _call(_lib.bitmatch_search, text, pattern)
 
 def sweeprun_search(text: str, pattern: str) -> list[int]:
-    return _call(_lib.webscan_search, text, pattern)
+    return _call(_lib.sweeprun_search, text, pattern)
 
 def sweeprun_search_multi(text: str, patterns: list[str]) -> list[tuple[int, int]]:
     """Multi-pattern Aho-Corasick search.
@@ -160,14 +160,14 @@ def sweeprun_search_multi(text: str, patterns: list[str]) -> list[tuple[int, int
     pos_buf  = (ctypes.c_int * _MAX_RESULTS)()
     id_buf   = (ctypes.c_int * _MAX_RESULTS)()
 
-    count = _lib.webscan_search_multi(
+    count = _lib.sweeprun_search_multi(
         b_text, len(b_text), arr_pat, arr_len, n, pos_buf, id_buf, _MAX_RESULTS
     )
     if count < 0:
         raise ValueError(
-            "webscan_search_multi returned a negative code – likely a malloc failure."
+            "sweeprun_search_multi returned a negative code – likely a malloc failure."
         )
     return list(zip(pos_buf[:count], id_buf[:count]))
 
 def fuzzysearch_search(text: str, pattern: str, max_errors: int = 1) -> list[int]:
-    return _call_tiermatch(text, pattern, max_errors)
+    return _call_fuzzysearch(text, pattern, max_errors)

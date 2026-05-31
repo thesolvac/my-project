@@ -1,5 +1,5 @@
 /* ===========================================================================
- * flowscan.c  —  DNAScan exact string matching
+ * dnascan.c  —  DNAScan exact string matching
  * ---------------------------------------------------------------------------
  * Project-book design (§21.3.1, proof 6.5): adaptive bigram-anchor scan with
  * bidirectional verification, replacing the classic KMP/LPS scan.
@@ -15,9 +15,9 @@
  *      suffix forwards) with early exit on the first mismatch.
  *
  * Edge cases: m==1 degenerates to a plain memchr loop on p[0]; m==2 fixes the
- * anchor at a==0. The flowscan_build_lps() helper is retained unchanged so the
+ * anchor at a==0. The dnascan_build_lps() helper is retained unchanged so the
  * public header API is preserved (the book keeps the LPS table available).
- * Signature is unchanged: callers (c_bindings.py, bitanchor fallback) are safe.
+ * Signature is unchanged: callers (c_bindings.py, bitmatch fallback) are safe.
  * =========================================================================== */
 #include "algorithms.h"
 #include <stdlib.h>
@@ -25,7 +25,7 @@
 
 /* Retained for API compatibility (declared in algorithms.h). The bigram-anchor
  * scan below does not use it, but the symbol must remain for the public header. */
-void flowscan_build_lps(const char *pattern, int pat_len, int *lps) {
+void dnascan_build_lps(const char *pattern, int pat_len, int *lps) {
     int len = 0;
     lps[0]  = 0;
     int i   = 1;
@@ -65,7 +65,7 @@ static int dnascan_select_anchor(const unsigned char *pattern, int m,
     return best_idx;
 }
 
-int flowscan_search(const char *text,    int text_len,
+int dnascan_search(const char *text,    int text_len,
                     const char *pattern, int pat_len,
                     int *positions,      int max_res) {
     if (pat_len == 0 || text_len == 0 || pat_len > text_len) return 0;

@@ -1,17 +1,17 @@
 /* ===========================================================================
- * webscan.c  —  SweepRun multi-pattern matching
+ * sweeprun.c  —  SweepRun multi-pattern matching
  * ---------------------------------------------------------------------------
  * Project-book design (SWOT 8.5, §21.3.4): a true multi-pattern Aho-Corasick
  * automaton, replacing the single-pattern "AC in disguise".
  *
- *   webscan_search_multi() builds a trie over ALL patterns, computes failure
+ *   sweeprun_search_multi() builds a trie over ALL patterns, computes failure
  *   links by BFS, propagates dictionary-suffix (output) links so that every
  *   pattern that is a suffix of the current path is reported, densifies the
  *   goto table into a full DFA for O(1) transitions, and uses a 256-bit
  *   presence bitmap to bypass the DFA for bytes absent from every pattern.
  *   It returns (position, pattern_id) pairs.
  *
- *   webscan_search() is preserved unchanged in signature: it is now a thin
+ *   sweeprun_search() is preserved unchanged in signature: it is now a thin
  *   wrapper that runs the multi-pattern engine over a single pattern (with a
  *   NULL pattern_ids buffer), so all existing callers keep working.
  * =========================================================================== */
@@ -27,7 +27,7 @@ typedef struct {
     int term_head;              /* head of pattern-id list ending here, or -1 */
 } AcNode;
 
-int webscan_search_multi(const char *text, int text_len,
+int sweeprun_search_multi(const char *text, int text_len,
                          const char **patterns, const int *pat_lens,
                          int n_patterns,
                          int *positions, int *pattern_ids, int max_res) {
@@ -136,7 +136,7 @@ int webscan_search_multi(const char *text, int text_len,
     return count;
 }
 
-int webscan_search(const char *text,    int text_len,
+int sweeprun_search(const char *text,    int text_len,
                    const char *pattern, int pat_len,
                    int *positions,      int max_res) {
     if (pat_len == 0 || text_len == 0 || pat_len > text_len) return 0;
@@ -144,6 +144,6 @@ int webscan_search(const char *text,    int text_len,
     const char *patterns[1] = { pattern };
     int         pat_lens[1] = { pat_len };
     /* single-pattern callers don't supply an id buffer → pass NULL */
-    return webscan_search_multi(text, text_len, patterns, pat_lens, 1,
+    return sweeprun_search_multi(text, text_len, patterns, pat_lens, 1,
                                 positions, NULL, max_res);
 }

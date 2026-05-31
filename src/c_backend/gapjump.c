@@ -1,5 +1,5 @@
 /* ===========================================================================
- * skipstride.c  —  GapJump exact string matching
+ * gapjump.c  —  GapJump exact string matching
  * ---------------------------------------------------------------------------
  * Project-book design (§21.3.2, proof 6.6): Boyer-Moore augmented with a
  * 2-gram bad-character table of 65,536 entries. Alongside the classic
@@ -14,7 +14,7 @@
 
 #define GJ_BC2_SIZE (256 * 256)   /* one slot per ordered byte pair */
 
-void skipstride_build_bad_char(const char *pattern, int pat_len,
+void gapjump_build_bad_char(const char *pattern, int pat_len,
                                int bc[ALPHABET_SIZE]) {
     for (int i = 0; i < ALPHABET_SIZE; i++) bc[i] = -1;
     for (int i = 0; i < pat_len;      i++) bc[(unsigned char)pattern[i]] = i;
@@ -28,7 +28,7 @@ static void gapjump_build_bc2(const unsigned char *pattern, int m, int *bc2) {
         bc2[pattern[i] * 256 + pattern[i + 1]] = i;
 }
 
-void skipstride_build_good_suffix(const char *pattern, int pat_len, int *gs) {
+void gapjump_build_good_suffix(const char *pattern, int pat_len, int *gs) {
     int *border = (int *)malloc((size_t)(pat_len + 1) * sizeof(int));
     if (!border) return;
 
@@ -55,17 +55,17 @@ void skipstride_build_good_suffix(const char *pattern, int pat_len, int *gs) {
     free(border);
 }
 
-int skipstride_search(const char *text,    int text_len,
+int gapjump_search(const char *text,    int text_len,
                       const char *pattern, int pat_len,
                       int *positions,      int max_res) {
     if (pat_len == 0 || text_len == 0 || pat_len > text_len) return 0;
 
     int bc[ALPHABET_SIZE];
-    skipstride_build_bad_char(pattern, pat_len, bc);
+    gapjump_build_bad_char(pattern, pat_len, bc);
 
     int *gs = (int *)malloc((size_t)(pat_len + 1) * sizeof(int));
     if (!gs) return -1;
-    skipstride_build_good_suffix(pattern, pat_len, gs);
+    gapjump_build_good_suffix(pattern, pat_len, gs);
 
     int *bc2 = (int *)malloc((size_t)GJ_BC2_SIZE * sizeof(int));   /* 256 KB */
     if (!bc2) { free(gs); return -1; }
