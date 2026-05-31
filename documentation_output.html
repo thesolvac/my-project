@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>APME Technical Reference Manual</title>
+<style>
+  :root {
+    --bg:      #F8FAFC;
+    --surface: #FFFFFF;
+    --border:  #E2E8F0;
+    --slate:   #293241;
+    --slate2:  #475569;
+    --blue:    #3B82F6;
+    --blue-l:  #EFF6FF;
+    --green:   #10B981;
+    --amber:   #F59E0B;
+    --purple:  #7C3AED;
+    --teal:    #0D9488;
+    --radius:  8px;
+    --font-mono: "JetBrains Mono","Fira Code","Consolas",monospace;
+    --font:    -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--slate); font-family: var(--font);
+         font-size: 14px; line-height: 1.65; }
+
+  /* ── Layout ── */
+  .wrapper { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             background: var(--slate); color: #CBD5E1; padding: 0;
+             border-right: 1px solid #1e293b; }
+  .main    { padding: 40px 48px 80px; max-width: 980px; }
+
+  /* ── Sidebar header ── */
+  .sidebar-hdr { padding: 28px 20px 20px;
+                 background: linear-gradient(135deg,#1e293b 60%,#1e3a5f);
+                 border-bottom: 1px solid #334155; }
+  .sidebar-hdr h1 { font-size: 1.1rem; font-weight: 700;
+                    color: #F8FAFC; letter-spacing:.02em; }
+  .sidebar-hdr p  { font-size: .73rem; color: #94A3B8; margin-top: 4px; }
+
+  /* ── TOC ── */
+  .toc { padding: 16px 0; }
+  .toc h3 { font-size: .7rem; font-weight: 600; letter-spacing: .1em;
+            text-transform: uppercase; color: #64748B;
+            padding: 0 20px 8px; }
+  .toc ul { list-style: none; }
+  .toc li a { display: block; padding: 7px 20px;
+              font-size: .82rem; color: #94A3B8; text-decoration: none;
+              border-left: 3px solid transparent;
+              transition: all .15s; }
+  .toc li a:hover { color: #F8FAFC; background: rgba(255,255,255,.05);
+                    border-left-color: var(--blue); }
+  .toc-sub { color: #475569; font-size: .72rem; }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 40px; padding-bottom: 24px;
+                 border-bottom: 2px solid var(--blue); }
+  .page-header h1 { font-size: 2rem; font-weight: 800; color: var(--slate);
+                    letter-spacing: -.02em; }
+  .page-header p  { color: var(--slate2); margin-top: 8px; font-size: .95rem; }
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px;
+           padding: 3px 10px; border-radius: 20px; font-size: .72rem;
+           font-weight: 600; letter-spacing: .03em; }
+  .badge-blue   { background: #DBEAFE; color: #1D4ED8; }
+  .badge-green  { background: #D1FAE5; color: #065F46; }
+  .badge-purple { background: #EDE9FE; color: #5B21B6; }
+  .badge-amber  { background: #FEF3C7; color: #92400E; }
+
+  /* ── Directory section ── */
+  .dir-section { margin-bottom: 52px; }
+  .dir-title { font-size: 1.3rem; font-weight: 700; color: var(--slate);
+               padding: 12px 0 8px; border-bottom: 1px solid var(--border);
+               margin-bottom: 20px; }
+  .dir-sub { font-size: .8rem; font-weight: 400; color: var(--slate2); }
+
+  /* ── File block ── */
+  .file-block { margin-bottom: 28px; }
+  .file-header { background: var(--slate); color: #93C5FD;
+                 padding: 7px 14px; border-radius: var(--radius) var(--radius) 0 0;
+                 font-size: .8rem; letter-spacing: .02em; }
+  .file-header code { font-family: var(--font-mono); }
+
+  /* ── Doc cards ── */
+  .doc-card { background: var(--surface); border: 1px solid var(--border);
+              border-top: none; padding: 14px 16px;
+              transition: box-shadow .15s; }
+  .doc-card:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+  .doc-card:hover { box-shadow: 0 2px 8px rgba(59,130,246,.08); }
+
+  .module-card .doc-kind  { color: var(--teal); font-size: .72rem;
+                            font-weight: 700; letter-spacing:.08em;
+                            text-transform:uppercase; margin-bottom:6px; }
+  .header-card .doc-kind  { color: var(--blue); font-size: .72rem;
+                            font-weight: 700; letter-spacing:.08em;
+                            text-transform:uppercase; margin-bottom:6px; }
+  .class-card  { border-left: 3px solid var(--purple); }
+  .func-card   { border-left: 3px solid var(--blue); }
+  .section-card { border-left: 3px solid var(--green); }
+  .block-card  { border-left: 3px solid var(--amber); }
+
+  .doc-sig  { font-family: var(--font-mono); font-size: .84rem;
+              color: var(--slate); margin-bottom: 6px; }
+  .doc-sig strong { color: var(--blue); }
+  .doc-loc  { font-size: .72rem; color: var(--slate2); }
+  .doc-kind { font-size: .72rem; font-weight: 600; letter-spacing:.05em;
+              text-transform: uppercase; color: var(--green); margin-bottom:4px; }
+  .doc-text { font-family: var(--font-mono); font-size: .78rem;
+              color: var(--slate2); white-space: pre-wrap; word-break: break-word;
+              background: var(--bg); border-radius: 4px;
+              padding: 10px 12px; margin-top: 6px;
+              border: 1px solid var(--border); }
+
+  @media (max-width: 768px) {
+    .wrapper { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; }
+    .main    { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <aside class="sidebar">
+    <div class="sidebar-hdr">
+      <h1>APME Docs</h1>
+      <p>Technical Reference Manual</p>
+    </div>
+    <nav class="toc">
+      <h3>Contents</h3>
+      <ul><li><a href="#root">Root<span class="toc-sub"> — app.py, build.py</span></a></li><li><a href="#c_backend">C Backend<span class="toc-sub"> — src/c_backend/</span></a></li><li><a href="#python_wrapper">Python Wrapper<span class="toc-sub"> — src/python_wrapper/</span></a></li><li><a href="#web_core">Web — Core<span class="toc-sub"> — src/web/ (app, config, db)</span></a></li><li><a href="#web_models">Web — Models<span class="toc-sub"> — src/web/models/</span></a></li><li><a href="#web_routes">Web — Routes<span class="toc-sub"> — src/web/routes/</span></a></li><li><a href="#web_static">Web — Static Assets<span class="toc-sub"> — src/web/static/</span></a></li><li><a href="#web_templates">Web — Templates<span class="toc-sub"> — src/web/templates/</span></a></li></ul>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>APME Technical Reference Manual</h1>
+      <p>Adaptive Pattern Matching Engine — complete internal documentation extracted
+         from all source files, organised by directory.</p>
+      <div class="badge-row">
+        <span class="badge badge-blue">C Backend — 7 files</span>
+        <span class="badge badge-green">Python Wrapper — 4 files</span>
+        <span class="badge badge-purple">Web Layer — 10 files</span>
+        <span class="badge badge-amber">6 Proprietary Algorithms</span>
+      </div>
+    </div>
+
+    <section id="root" class="dir-section"><h2 class="dir-title">Root<span class="dir-sub"> — app.py, build.py</span></h2><div class="file-block"><div class="file-header"><code>app.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">APME – Application Entry Point
+================================
+Run the Flask development server.
+
+Usage:
+    python app.py               # starts on http://127.0.0.1:5000
+    python app.py --port 8080   # custom port
+
+For production use a proper WSGI server:
+    gunicorn "src.web.app:create_app()" --bind 0.0.0.0:5000</pre></div></div><div class="file-block"><div class="file-header"><code>build.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">APME – C Backend Build Script
+================================
+Cross-platform alternative to running 'make' directly.
+Works on Windows (MinGW/gcc), Linux, and macOS.
+
+Usage:
+    python build.py           # compile C shared library
+    python build.py --clean   # remove compiled artifacts</pre></div></div><div class="file-block"><div class="file-header"><code>promote_admin.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Promote a user to admin role by email.</pre></div></div></section><section id="c_backend" class="dir-section"><h2 class="dir-title">C Backend<span class="dir-sub"> — src/c_backend/</span></h2><div class="file-block"><div class="file-header"><code>src/c_backend/algorithms.h</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">APME – Adaptive Pattern Matching Engine
+C Backend: Proprietary Algorithm Interface
+===========================================
+Six APME-proprietary string-matching algorithms compiled into a single
+shared library (algorithms.dll / .so / .dylib).
+Python loads this library via ctypes (see src/engine/c_bindings.py).
+Standard calling convention (all exact algorithms):
+  int &lt;algo&gt;_search(text, text_len, pattern, pat_len, positions[], max_res)
+  Returns: match count (negative on allocation failure)
+FuzzySearch has an extra max_errors parameter:
+  int fuzzysearch_search(text, text_len, pattern, pat_len, max_errors, positions[], max_res)
+Algorithms (proprietary APME variants):
+  dnascan_search    – DNAScan    (KMP + memchr first-char anchor)   O(n+m)
+  gapjump_search  – GapJump  (BM + Sunday bonus shift)          O(n/(m+1)) best
+  dualrabin_search    – DualRabin    (Rabin-Karp dual rolling hash)      O(n+m) avg
+  bitmatch_search   – BitMatch   (Shift-Or + state-zero memchr skip) O(n) / m≤64
+  sweeprun_search     – SweepRun     (Aho-Corasick + presence-bitmap bypass) O(n)
+  fuzzysearch_search   – FuzzySearch   (Wu-Manber Bitap + best-tier dedup) O(n·k)</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Hard limit on stored match positions per call.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Extended-ASCII alphabet size.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">======================================================================
+   DNAScan  (APME proprietary — KMP with memchr first-character anchor)
+   ======================================================================</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dnascan_build_lps</strong></div><pre class=doc-text>Builds the LPS (Longest Proper Prefix which is also Suffix) table.
+Used internally by dnascan_search.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dnascan_search</strong></div><pre class=doc-text>DNAScan: KMP augmented with a memchr-based first-character anchor.
+When the pattern pointer resets to 0 (no partial match), DNAScan
+uses memchr to jump directly to the next occurrence of pattern[0]
+instead of advancing one byte at a time.  This eliminates redundant
+comparisons on character classes absent from the pattern.
+Time  O(n + m)  Space  O(m)
+Practical improvement: up to 3-4× faster than classic KMP on sparse text.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>gapjump_build_bad_char</strong></div><pre class=doc-text>======================================================================
+   GapJump  (APME proprietary — Boyer-Moore + Sunday bonus shift)
+   ======================================================================</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>gapjump_search</strong></div><pre class=doc-text>GapJump: Boyer-Moore with an additional Sunday-shift heuristic.
+After computing the standard BC and GS shifts, GapJump also inspects
+the character immediately beyond the current window (text[s + pat_len]).
+If that character is absent from the pattern, the full window can be
+skipped in one stride.  The final shift is max(BC, GS, Sunday).
+Time  O(n/(m+1)) best  O(n) worst  Space  O(m + sigma)</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">======================================================================
+   DualRabin  (APME proprietary — Rabin-Karp with dual rolling hashes)
+   ======================================================================</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dualrabin_search</strong></div><pre class=doc-text>DualRabin: Rabin-Karp with two independent rolling hashes.
+Maintains two parallel polynomial hashes (different base/mod pairs).
+Character-by-character verification is only triggered when BOTH hashes
+agree, reducing the false-positive rate from ~1/MOD to ~1/(MOD1·MOD2)
+— effectively zero for practical text lengths.
+Time  O(n + m) avg  O(n·m) worst  Space  O(1)</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">======================================================================
+   BitMatch  (APME proprietary — Shift-Or with state-zero memchr skip)
+   ======================================================================</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>bitmatch_search</strong></div><pre class=doc-text>BitMatch: Shift-Or bit-parallel NFA with dead-state fast-forward.
+When the NFA state vector drops to zero (no active match threads),
+BitMatch uses memchr to jump directly to the next occurrence of
+pattern[0] rather than spinning through non-matching bytes one at a time.
+Patterns &gt; 64 bytes fall back to dnascan_search.
+Time  O(n) for m ≤ 64  Space  O(sigma)
+Practical speedup: significant for patterns with a rare leading byte.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">======================================================================
+   SweepRun  (APME proprietary — Aho-Corasick + presence-bitmap bypass)
+   ======================================================================</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>sweeprun_search</strong></div><pre class=doc-text>SweepRun: Aho-Corasick DFA with a 256-bit character presence bypass.
+Before each DFA transition, SweepRun checks a precomputed 256-bit bitmap
+of all characters in the pattern.  Bytes not in the pattern immediately
+reset the automaton to the root state without a DFA table lookup.
+This is particularly effective for keyword searches in natural-language
+text where most bytes are not part of any pattern.
+Time  O(n + m·sigma)  Space  O((m+1)·sigma)</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">======================================================================
+   FuzzySearch  (APME proprietary — Wu-Manber Bitap with best-tier dedup)
+   ======================================================================</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>fuzzysearch_search</strong></div><pre class=doc-text>FuzzySearch: k-error Bitap with best-tier match deduplication.
+Extends Wu-Manber fuzzy search with a post-update sweep that reports
+each match position at the LOWEST error tier (d) where a match is found.
+Higher-tier accept bits at that position are cleared immediately,
+preventing the same alignment from being reported multiple times at
+different error levels.  Uses Levenshtein DP for patterns &gt; 64 bytes.
+Time  O(n·k) Bitap  O(n·m) DP  Space  O(k + sigma) / O(m)</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">ALGORITHMS_H</pre></div><div class="doc-card section-card"><div class="doc-kind">§ DNAScan  (APME proprietary — KMP with memchr first-character anchor)</div></div><div class="doc-card section-card"><div class="doc-kind">§ GapJump  (APME proprietary — Boyer-Moore + Sunday bonus shift)</div></div><div class="doc-card section-card"><div class="doc-kind">§ DualRabin  (APME proprietary — Rabin-Karp with dual rolling hashes)</div></div><div class="doc-card section-card"><div class="doc-kind">§ BitMatch  (APME proprietary — Shift-Or with state-zero memchr skip)</div></div><div class="doc-card section-card"><div class="doc-kind">§ SweepRun  (APME proprietary — Aho-Corasick + presence-bitmap bypass)</div></div><div class="doc-card section-card"><div class="doc-kind">§ FuzzySearch  (APME proprietary — Wu-Manber Bitap with best-tier dedup)</div></div></div><div class="file-block"><div class="file-header"><code>src/c_backend/dnascan.c</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">DNAScan – APME Proprietary String Matching Algorithm
+======================================================
+Base algorithm : Knuth-Morris-Pratt (KMP)
+APME optimisation : memchr first-character anchor
+How it differs from classic KMP
+────────────────────────────────
+Classic KMP advances the text pointer one byte at a time when the
+pattern pointer is at position 0 (no partial match is alive).  DNAScan
+replaces that single-byte advance with a memchr call that jumps directly
+to the next occurrence of pattern[0] in the remaining text.  On text
+where pattern[0] is rare, this eliminates the vast majority of NOP
+comparisons and delivers 3–4× better throughput than classic KMP while
+preserving the exact O(n + m) worst-case guarantee.
+Complexity
+  Preprocessing : O(m)      (LPS table, unchanged)
+  Search best   : O(n/σ₀)  where σ₀ = frequency of pattern[0] in text
+  Search worst  : O(n + m)  (guaranteed, same as KMP)
+  Space         : O(m)      (LPS table only)
+When APME prefers DNAScan
+  - Small alphabets (binary, DNA) where BM bad-char skips shrink
+  - Short patterns (m ≤ 2) — preprocessing of BM/DualRabin not worth it
+  - Highly repetitive text (&gt;70% same char) — GapJump degrades; DNAScan stays linear
+  - Patterns whose first character is rare in the corpus</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">LPS table construction</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dnascan_build_lps</strong></div><pre class=doc-text>----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">DNAScan search</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dnascan_search</strong></div><pre class=doc-text>----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">cursor in text</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">cursor in pattern</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">APME DNAScan optimisation:
+When the pattern pointer is at 0, no partial match is alive.
+Use memchr to jump directly to the next occurrence of pattern[0]
+instead of advancing one byte at a time.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">pattern[0] never appears again</pre></div></div><div class="file-block"><div class="file-header"><code>src/c_backend/gapjump.c</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">GapJump – APME Proprietary String Matching Algorithm
+========================================================
+Base algorithm : Boyer-Moore (Bad Character + Good Suffix)
+APME optimisation : Sunday bonus shift (third heuristic)
+How it differs from classic Boyer-Moore
+─────────────────────────────────────────
+Classic Boyer-Moore takes max(BC_shift, GS_shift) on each mismatch.
+GapJump adds a third heuristic inspired by Sunday's algorithm:
+after resolving BC and GS, inspect the character at text[s + pat_len]
+— the byte immediately BEYOND the current window.  For any complete
+alignment to succeed starting at s+1 or later, that byte must eventually
+align with some position inside the pattern.  If it is absent from the
+pattern, the entire window plus one can be skipped in a single stride.
+Final shift = max(BC_shift, GS_shift, Sunday_shift)
+Complexity
+  Preprocessing : O(m + sigma)
+  Search best   : O(n / (m + 1))  — one extra byte skipped per window
+  Search worst  : O(n)            — GS table prevents quadratic behaviour
+  Space         : O(m + sigma)
+When APME prefers GapJump
+  - Natural language / source-code text (large alphabet)
+  - Long patterns (m &gt; 10) where stride gains are largest
+  - General-purpose default for mixed text</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Bad Character table</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>gapjump_build_bad_char</strong></div><pre class=doc-text>----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Good Suffix table  (Apostolico-Giancarlo formulation)</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>gapjump_build_good_suffix</strong></div><pre class=doc-text>----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">GapJump search</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>gapjump_search</strong></div><pre class=doc-text>----------------------------------------------------------------------</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">APME GapJump optimisation — Sunday bonus shift:
+Inspect the character just past the current window.
+If it is absent from the pattern, the entire window + 1
+position can be skipped.  Take the maximum of all three shifts.</pre></div></div><div class="file-block"><div class="file-header"><code>src/c_backend/dualrabin.c</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">DualRabin – APME Proprietary String Matching Algorithm
+======================================================
+Base algorithm : Rabin-Karp (single rolling polynomial hash)
+APME optimisation : dual independent rolling hashes
+How it differs from classic Rabin-Karp
+───────────────────────────────────────
+Classic Rabin-Karp uses one hash; when it collides, a full O(m)
+character comparison is required to confirm or reject the match.
+DualRabin maintains TWO independent rolling hashes (different base and
+modulus pairs) in parallel.  Character-by-character verification is
+only triggered when BOTH hashes agree simultaneously.  The probability
+of a simultaneous false collision is 1/(MOD1 × MOD2) ≈ 10⁻¹⁸, making
+spurious verifications practically impossible for any realistic text.
+The rolling update cost doubles (two hash computations per window slide)
+but the savings from eliminating verification calls overwhelmingly
+dominate on texts with many near-collisions.
+Complexity
+  Preprocessing : O(m)
+  Search avg    : O(n + m)   — near-zero false-positive verifications
+  Search worst  : O(n · m)  — theoretical, requires deliberate collision
+  Space         : O(1)
+When APME prefers DualRabin
+  - Multiple patterns (hash all simultaneously, single text pass)
+  - Short patterns (m ≤ 10) in very large texts
+  - Fingerprinting / plagiarism detection</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Primary hash parameters</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">large prime, collision prob ≈ 10⁻⁹</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Secondary hash parameters (independent base and modulus)</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dualrabin_search</strong></div><pre class=doc-text>NTT-friendly prime, also ≈ 10⁹</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Precompute h1 = BASE1^(pat_len-1) % MOD1
+           h2 = BASE2^(pat_len-1) % MOD2
+These are the coefficients used to remove the leftmost character
+from each rolling window.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Compute initial hashes for pattern and first text window</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">APME DualRabin optimisation:
+Only verify character-by-character when BOTH hashes agree.
+A single-hash collision probability is ≈1/10⁹; dual-hash is ≈10⁻¹⁸.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Roll both hashes forward</pre></div></div><div class="file-block"><div class="file-header"><code>src/c_backend/bitmatch.c</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">BitMatch – APME Proprietary String Matching Algorithm
+=======================================================
+Base algorithm : Shift-Or / Bitap (64-bit NFA bit-parallelism)
+APME optimisation : memchr dead-state skip
+How it differs from classic Shift-Or
+──────────────────────────────────────
+Classic Shift-Or processes every text byte unconditionally.  When the
+NFA state vector drops to zero — meaning no partial match threads are
+alive — the algorithm still advances one byte at a time waiting for a
+character that can restart a thread.  BitMatch detects this dead state
+after each NFA update and immediately calls memchr to jump to the next
+occurrence of pattern[0], the only byte that can reactivate the NFA.
+This is particularly effective when pattern[0] is rare in the text
+(e.g., a special delimiter in log files) or when the pattern itself is
+long relative to the alphabet, because the NFA resets frequently and
+memchr can skip large stretches with SIMD acceleration.
+Patterns &gt; 64 bytes fall back to dnascan_search (same O(n+m) guarantee).
+Complexity
+  Time  O(n) for m ≤ 64 — worst unchanged; average improves with sparsity
+  Space O(sigma) — 256 64-bit masks
+When APME prefers BitMatch
+  - Short ASCII patterns (m ≤ 64) with a rare leading byte
+  - High-throughput log scanning where pattern[0] is a sentinel char
+  - UTF-8 safe: multi-byte sequences are treated as byte runs</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">DNAScan fallback for long patterns</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Patterns &gt; 64 bytes: fall back to DNAScan</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Build D[c]: bitmask with bit j set iff pattern[j] == c</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">APME BitMatch optimisation — dead-state fast-forward:
+When the NFA state is zero, no match thread is alive.
+Jump directly to the next occurrence of pattern[0] instead of
+advancing one byte at a time, exploiting memchr's SIMD acceleration.</pre></div></div><div class="file-block"><div class="file-header"><code>src/c_backend/sweeprun.c</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">SweepRun – APME Proprietary String Matching Algorithm
+=====================================================
+Base algorithm : Aho-Corasick (trie + BFS failure links → complete DFA)
+APME optimisation : 256-bit character presence bypass
+How it differs from classic Aho-Corasick
+──────────────────────────────────────────
+Classic Aho-Corasick performs a DFA table lookup for every text byte,
+even bytes that cannot appear in any pattern.  SweepRun precomputes a
+256-bit presence bitmap (four 64-bit words) during automaton construction.
+Before each DFA transition, a single bitwise AND tests whether the
+current byte belongs to the pattern's character set.  If not, the
+automaton resets to the root state with no table access — saving both
+the memory load and the potential cache miss.
+In keyword searches over natural-language text, the majority of bytes
+(punctuation, digits, rare letters) are typically absent from the pattern,
+so SweepRun short-circuits most of the inner loop.
+Complexity
+  Construction  O(m · sigma)  — unchanged
+  Search        O(n)          — unchanged; constant factor reduced
+  Space         O((m+1) · sigma) + 32 bytes for presence bitmap
+When APME prefers SweepRun
+  - Multi-pattern searches (primary use case for Aho-Corasick)
+  - Keyword spotting in mixed natural-language and code text
+  - Any scenario where the pattern character set is a small subset of the alphabet</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">APME SweepRun optimisation — build a 256-bit character presence bitmap.
+presence[c &gt;&gt; 6] bit (c &amp; 63) is set iff byte value c appears in pattern.
+A single bitwise AND per text byte replaces a DFA lookup for non-pattern chars.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Presence check: if this byte cannot appear in the pattern,
+skip the DFA lookup and reset to root immediately.</pre></div></div><div class="file-block"><div class="file-header"><code>src/c_backend/fuzzysearch.c</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">FuzzySearch – APME Proprietary String Matching Algorithm
+=======================================================
+Base algorithm : Wu-Manber k-error Bitap (64-bit NFA bit-parallelism)
+APME optimisation : best-tier deduplication
+How it differs from classic Wu-Manber Bitap
+─────────────────────────────────────────────
+Classic Wu-Manber reports a match whenever R[k] has the accept bit set,
+regardless of whether a lower-error match also ends at that same position.
+This means the same text position can be emitted multiple times — once for
+each error tier 0..k that fires simultaneously — cluttering results with
+redundant near-duplicate entries.
+FuzzySearch adds a best-tier deduplication pass after each NFA step:
+  1. Scan d = 0, 1, …, k in ascending order.
+  2. If R[d] has the accept bit set, record the match at tier d (exact or
+     lowest-error) and clear the accept bit in ALL higher tiers (d+1..k) at
+     that same position.  This suppresses every redundant higher-tier report
+     before it can be emitted.
+  3. At most one match is recorded per text position, at the best (lowest)
+     error count.
+The deduplication adds one small inner scan (≤ k iterations) per text byte
+that fires an accept — negligible overhead for typical k ≤ 5.
+FALLBACK — Levenshtein DP  (patterns &gt; 64 bytes)
+──────────────────────────────────────────────────
+The DP path is already position-unique by construction (one dp[m] cell per
+text position), so no structural change is needed.  Renamed for consistency.
+Complexity
+  Bitap path  O(n · k) time, O(k + σ) space  — unchanged
+  DP path     O(n · m) time, O(m) space       — unchanged
+When APME prefers FuzzySearch
+  - Any fuzzy search with k ≥ 2 where duplicate-tier results are undesirable
+  - Ranked / scored output pipelines that expect one result per position
+  - High-k searches over short patterns where tier collision is frequent
+Reference: Wu &amp; Manber, "Fast Text Searching Allowing Errors",
+           CACM 35(10), 1992.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">max pattern length for the 64-bit Bitap path</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">maximum supported error budget</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>bitap_fuzzysearch</strong></div><pre class=doc-text>── Wu-Manber k-error Bitap with best-tier deduplication ────────────────────</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">D[c]: bit j set iff pattern[j] == c</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">k+1 state bitvectors</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Exact layer</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Error layers</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">substitution / match</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">delete from text</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">insert in pattern</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">delete from pattern</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">APME FuzzySearch optimisation — best-tier deduplication:
+Scan d = 0..max_err in ascending order.  The first tier whose
+accept bit fires is the lowest-error (best) match at this position.
+Clear the accept bit in all higher tiers so they cannot emit a
+duplicate match for the same position.</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Record once at the best tier</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Suppress redundant higher-tier accepts at this position</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">only one record per position</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dp_fuzzysearch</strong></div><pre class=doc-text>── Levenshtein DP fallback (patterns &gt; 64 bytes) ──────────────────────────</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">Init: free to start anywhere in text (no row-0 penalty)</pre></div><div class="doc-card block-card"><div class="doc-kind">Block Comment</div><pre class="doc-text">free to start a new match at this position</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>fuzzysearch_search</strong></div><pre class=doc-text>── Public entry point ─────────────────────────────────────────────────────</pre></div></div></section><section id="python_wrapper" class="dir-section"><h2 class="dir-title">Python Wrapper<span class="dir-sub"> — src/python_wrapper/</span></h2><div class="file-block"><div class="file-header"><code>src/python_wrapper/__init__.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">APME Engine Package
+===================
+Exposes the top-level search API so callers only need:
+
+    from src.python_wrapper import APMEEngine</pre></div></div><div class="file-block"><div class="file-header"><code>src/python_wrapper/apme.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">APME – Adaptive Pattern Matching Engine  (Orchestration Layer)
+===============================================================
+Orchestrates the complete search pipeline:
+
+  1. Input validation &amp; edge-case handling
+  2. Heuristic algorithm selection           (heuristics.py)
+  3. C-backend algorithm execution           (c_bindings.py)
+  4. Streaming support for large files       (chunked reads with overlap)
+  5. Result normalisation &amp; context snippets
+  6. Performance metrics collection
+
+Public API
+----------
+    engine = APMEEngine()
+
+    # In-memory search
+    result = engine.search(text, pattern)
+    result = engine.search(text, pattern, mode="manual", algorithm="dna_scan")
+
+    # File search with streaming
+    result = engine.search_file("/path/to/large.log", pattern)
+
+    # Comparative mode (runs all six, returns dict of SearchResult)
+    results = engine.compare(text, pattern)</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>Match</strong> <span class="doc-loc">line 46</span></div><pre class="doc-text">A single occurrence of the pattern in the text.</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>SearchResult</strong> <span class="doc-loc">line 56</span></div><pre class="doc-text">Complete output of one APME search operation.</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>APMEEngine</strong> <span class="doc-loc">line 107</span></div><pre class="doc-text">The central orchestrator of the Adaptive Pattern Matching Engine.
+
+The engine is stateless between calls; a single instance can serve
+multiple concurrent requests (it holds no mutable per-search state).</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_python_dnascan</strong> <span class="doc-loc">line 413</span></div><pre class=doc-text>Pure-Python DNAScan implementation (LPS-based exact search).
+Activated automatically when the C shared library cannot be loaded.
+O(n + m) time, O(m) space.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>to_dict</strong> <span class="doc-loc">line 83</span></div><pre class=doc-text>Serialise to a JSON-friendly dict (for MongoDB storage).</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>search</strong> <span class="doc-loc">line 120</span></div><pre class=doc-text>Search for *pattern* in *text* (in-memory).
+
+Args:
+    text:         Text to search within.
+    pattern:      Pattern to find.
+    mode:         "auto"   – heuristic selects the algorithm.
+                  "manual" – use the *algorithm* argument.
+    algorithm:    Explicit algorithm name (only when mode=="manual").
+                  One of: "dna_scan", "gap_jump", "dual_rabin",
+                          "bit_match", "sweep_run", "fuzzy_search".
+    num_patterns: Hint that multiple patterns will be searched.
+                  A value &gt; 1 biases selection toward SweepRun.
+    max_errors:   Maximum edit distance for fuzzy matching (0–5).
+
+Returns:
+    SearchResult populated with matches and performance data.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>search_file</strong> <span class="doc-loc">line 165</span></div><pre class=doc-text>Memory-efficient streaming search over a large file.
+
+Reads the file in overlapping chunks to avoid missing cross-boundary
+matches.  Overlap width = len(pattern.encode()) − 1, ensuring that
+any match spanning two consecutive chunks is captured exactly once.
+
+Args:
+    file_path:  Path to the target file.
+    pattern:    Pattern to search for.
+    mode:       "auto" or "manual".
+    algorithm:  Explicit algorithm (only when mode=="manual").
+    chunk_size: Bytes to read per iteration (default 64 KB).
+    encoding:   File encoding (default UTF-8; falls back to 'replace').
+
+Returns:
+    SearchResult with globally-adjusted match positions.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>compare</strong> <span class="doc-loc">line 266</span></div><pre class=doc-text>Run all six algorithms and return their individual SearchResults.
+Used by the "Compare Mode" UI to display a side-by-side benchmark.
+
+Returns:
+    Dict mapping algorithm name → SearchResult.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_execute</strong> <span class="doc-loc">line 290</span></div><pre class=doc-text>Run the algorithm and return (positions, duration_seconds).</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_dispatch</strong> <span class="doc-loc">line 303</span></div><pre class=doc-text>Call the appropriate C binding, falling back to Python DNAScan if needed.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_build_matches</strong> <span class="doc-loc">line 364</span></div><pre class=doc-text>Convert raw index list into rich Match objects with context.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ In-memory search</div></div><div class="doc-card section-card"><div class="doc-kind">§ File search with streaming</div></div><div class="doc-card section-card"><div class="doc-kind">§ Comparative mode (runs all six, returns dict of SearchResult)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Data classes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Match data</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm metadata</div></div><div class="doc-card section-card"><div class="doc-kind">§ Performance metrics</div></div><div class="doc-card section-card"><div class="doc-kind">§ Input metadata</div></div><div class="doc-card section-card"><div class="doc-kind">§ Warnings</div></div><div class="doc-card section-card"><div class="doc-kind">§ Matches are stored separately to keep documents small</div></div><div class="doc-card section-card"><div class="doc-kind">§ Engine</div></div><div class="doc-card section-card"><div class="doc-kind">§ Public interface</div></div><div class="doc-card section-card"><div class="doc-kind">§ Read a small sample for heuristic analysis</div></div><div class="doc-card section-card"><div class="doc-kind">§ De-duplicate positions that fall inside the leftover region</div></div><div class="doc-card section-card"><div class="doc-kind">§ De-duplicate and sort (small redundancy can occur at chunk boundaries)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Build rich Match objects using the in-memory sample as context source</div></div><div class="doc-card section-card"><div class="doc-kind">§ Private helpers</div></div><div class="doc-card section-card"><div class="doc-kind">§ Pure-Python DNAScan fallback (used when C library is unavailable)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Build LPS table</div></div></div><div class="file-block"><div class="file-header"><code>src/python_wrapper/c_bindings.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">C Backend Bindings
+==================
+Loads the compiled shared library (algorithms.dll / .so / .dylib) and
+exposes typed Python wrappers for each search function via ctypes.
+
+The library is expected at:
+    &lt;project_root&gt;/src/c_backend/algorithms.&lt;ext&gt;
+
+If the library cannot be found, C_BACKEND_AVAILABLE is set to False and
+the engine falls back to its pure-Python DNAScan implementation.
+
+Public API
+----------
+    from src.python_wrapper.c_bindings import (
+        dnascan_search, gapjump_search, dualrabin_search,
+        bitmatch_search, sweeprun_search, fuzzysearch_search,
+    )
+    positions = dnascan_search("hello world", "world")           # → [6]
+    positions = fuzzysearch_search("hello world", "wrold", k=1)    # → [6]</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_find_library</strong> <span class="doc-loc">line 38</span></div><pre class=doc-text>Return the path to the compiled shared library, or raise FileNotFoundError.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_configure</strong> <span class="doc-loc">line 61</span></div><pre class=doc-text>Attach argument and return types to all six search functions.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_call</strong> <span class="doc-loc">line 111</span></div><pre class=doc-text>Invoke a C search function and return a list of match positions.
+
+Args:
+    fn:      ctypes function reference (standard 6-arg signature)
+    text:    Text to search within
+    pattern: Pattern to locate
+
+Returns:
+    Sorted list of integer start indices.
+
+Raises:
+    RuntimeError: C library not loaded
+    ValueError:   C function returned error code (e.g. malloc failure)</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_call_fuzzysearch</strong> <span class="doc-loc">line 147</span></div><pre class=doc-text>Invoke fuzzysearch_search (7-arg signature with max_errors).</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dnascan_search</strong> <span class="doc-loc">line 176</span></div><pre class=doc-text>DNAScan via C backend. O(n/σ₀) best case, O(n+m) worst case.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>gapjump_search</strong> <span class="doc-loc">line 181</span></div><pre class=doc-text>GapJump via C backend. O(n/(m+1)) best case.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>dualrabin_search</strong> <span class="doc-loc">line 186</span></div><pre class=doc-text>DualRabin (dual rolling hash) via C backend. O(n+m) average. Collision prob ≈ 10⁻¹⁸.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>bitmatch_search</strong> <span class="doc-loc">line 191</span></div><pre class=doc-text>BitMatch via C backend. O(n) for m ≤ 64.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>sweeprun_search</strong> <span class="doc-loc">line 196</span></div><pre class=doc-text>SweepRun via C backend. O(n) search.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>fuzzysearch_search</strong> <span class="doc-loc">line 201</span></div><pre class=doc-text>FuzzySearch (Wu-Manber + best-tier deduplication) via C backend.
+O(n·k) for m ≤ 64; O(n·m) Levenshtein DP fallback for m &gt; 64.
+
+Args:
+    max_errors: Maximum allowed edit distance (0–5).</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Library discovery &amp; loading</div></div><div class="doc-card section-card"><div class="doc-kind">§ fuzzysearch_search has an extra max_errors parameter</div></div><div class="doc-card section-card"><div class="doc-kind">§ Internal helper</div></div><div class="doc-card section-card"><div class="doc-kind">§ Public wrappers</div></div></div><div class="file-block"><div class="file-header"><code>src/python_wrapper/heuristics.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">APME Heuristic Algorithm Selector
+===================================
+Determines which C-backend algorithm will perform best for a given input,
+using purely rule-based logic derived from the theoretical complexity of
+each algorithm.  No machine-learning or AI is used.
+
+Six APME proprietary algorithms are available:
+  dna_scan   – DNAScan  (LPS table + memchr anchor)           O(n/σ₀) best, O(n+m) worst
+  gap_jump – GapJump (triple-heuristic skip search)       O(n/(m+1)) best
+  dual_rabin   – DualRabin  (dual rolling hash)                   O(n+m) avg, ≈10⁻¹⁸ false-pos
+  bit_match  – BitMatch (NFA bit-parallel + dead-state skip)  O(n) for m ≤ 64
+  sweep_run    – SweepRun   (DFA automaton + presence bitmap)      O(n) search after O(m·σ) build
+  fuzzy_search  – FuzzySearch (approximate NFA + best-tier dedup)   O(n·k); DP fallback for m &gt; 64
+
+Auto-selection decision table (for exact algorithms):
+───────────────────────────────────────────────────────────────────────
+Priority  Condition                                    Algorithm
+────────  ───────────────────────────────────────────  ─────────────
+2         m ≤ 2                                        DNAScan
+2.5       m ≤ 64 AND ASCII-only pattern                BitMatch
+3         num_patterns &gt; 1                             SweepRun
+4         alphabet cardinality σ ≤ 4  (binary/DNA)    DNAScan
+5         repetitiveness ratio  &gt; 70 %                DNAScan
+6         m &gt; 10  AND  σ &gt; 10  AND  n &gt; 5 000         GapJump
+7         m ≤ 10  AND  n &gt; 100 000                    DualRabin
+8         default                                      GapJump
+
+FuzzySearch and SweepRun are also available as manual selections.
+
+References
+----------
+Crochemore &amp; Rytter, "Text Algorithms", OUP, 1994.
+Navarro &amp; Raffinot, "Flexible Pattern Matching in Strings", CUP, 2002.
+Wu &amp; Manber, "Fast Text Searching Allowing Errors", CACM 35(10), 1992.</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>HeuristicResult</strong> <span class="doc-loc">line 69</span></div><pre class="doc-text">Carries the selected algorithm and a human-readable justification.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_alphabet_size</strong> <span class="doc-loc">line 133</span></div><pre class=doc-text>Count distinct characters in the first _SAMPLE_CAP chars of text.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_repetitiveness</strong> <span class="doc-loc">line 138</span></div><pre class=doc-text>Fraction of the sample occupied by the single most-frequent character.
+Returns a value in [0, 1].  &gt; 0.70 indicates highly repetitive text.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>select_algorithm</strong> <span class="doc-loc">line 154</span></div><pre class=doc-text>Choose the best string-matching algorithm for the given input.
+
+Args:
+    text:         Full text (or a representative sample) to search.
+    pattern:      Primary search pattern.
+    num_patterns: Number of distinct patterns in this session.
+                  A value &gt; 1 triggers SweepRun preference.
+    manual:       If set, bypass heuristics and return this algorithm.
+                  Accepted values: "dna_scan", "gap_jump", "dual_rabin",
+                     "bit_match", "sweep_run", "fuzzy_search".
+
+Returns:
+    HeuristicResult with the selected Algorithm and justification.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Public types</div></div><div class="doc-card section-card"><div class="doc-kind">§ Per-algorithm complexity reference (shown in the results UI)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Input analysis helpers</div></div><div class="doc-card section-card"><div class="doc-kind">§ Public selector</div></div><div class="doc-card section-card"><div class="doc-kind">§ Manual override</div></div></div></section><section id="web_core" class="dir-section"><h2 class="dir-title">Web — Core<span class="dir-sub"> — src/web/ (app, config, db)</span></h2><div class="file-block"><div class="file-header"><code>src/web/__init__.py</code></div><div class="doc-card section-card"><div class="doc-kind">§ APME Web Package</div></div></div><div class="file-block"><div class="file-header"><code>src/web/app.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Flask Application Factory
+==========================
+Creates and configures the Flask app, registers blueprints,
+and sets up Flask-Login.
+
+Usage:
+    from src.web.app import create_app
+    app = create_app()
+    app.run()</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>create_app</strong> <span class="doc-loc">line 25</span></div><pre class=doc-text>Application factory.  Returns a fully configured Flask instance.
+
+Args:
+    config_class: Configuration object (defaults to Config).
+
+Returns:
+    Configured Flask application.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Ensure upload directory exists</div></div><div class="doc-card section-card"><div class="doc-kind">§ Database teardown</div></div><div class="doc-card section-card"><div class="doc-kind">§ Flask-Login</div></div><div class="doc-card section-card"><div class="doc-kind">§ Blueprints</div></div><div class="doc-card section-card"><div class="doc-kind">§ MongoDB indexes (idempotent)</div></div></div><div class="file-block"><div class="file-header"><code>src/web/config.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Application Configuration
+==========================
+All settings are read from environment variables with sensible defaults.
+Copy .env.example to .env and fill in values before running in production.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Security</div></div><div class="doc-card section-card"><div class="doc-kind">§ MongoDB</div></div><div class="doc-card section-card"><div class="doc-kind">§ Uploads</div></div><div class="doc-card section-card"><div class="doc-kind">§ Flask</div></div></div><div class="file-block"><div class="file-header"><code>src/web/database.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Database Layer
+==============
+Returns either a real PyMongo database or an in-memory fallback,
+depending on whether MongoDB is reachable.
+
+The in-memory store mirrors the PyMongo collection API so all route
+code works unchanged.  Data resets on server restart; install MongoDB
+and set MONGO_URI in .env for persistent storage.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_test_mongo</strong> <span class="doc-loc">line 18</span></div><pre class=doc-text>Return True if MongoDB is reachable at *uri*.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>get_db</strong> <span class="doc-loc">line 30</span></div><pre class=doc-text>Return the active database handle bound to the current request context.
+Falls back to MemoryDatabase when MongoDB is unreachable.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>close_db</strong> <span class="doc-loc">line 60</span></div><pre class=doc-text>Tear-down hook: close the MongoClient (no-op for in-memory store).</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>init_db_indexes</strong> <span class="doc-loc">line 67</span></div><pre class=doc-text>Create indexes if using real MongoDB (no-op otherwise).</pre></div></div><div class="file-block"><div class="file-header"><code>src/web/memory_store.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">In-Memory MongoDB-Compatible Store
+====================================
+A lightweight dict-based store that mirrors the PyMongo collection API
+used by this app.  Activated automatically when MongoDB is unreachable.
+
+Supports: insert_one, find_one, find (with sort/limit), update_one,
+          count_documents, aggregate (basic $group/$sort), create_index.
+
+Data is held in RAM only — it resets when the server restarts.
+Install MongoDB and set MONGO_URI in .env for persistent storage.</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>_MemCollection</strong> <span class="doc-loc">line 53</span></div><pre class="doc-text">Mimics a pymongo Collection.</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>_Cursor</strong> <span class="doc-loc">line 187</span></div><pre class="doc-text">Mimics a pymongo Cursor with sort() and limit().</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>MemoryDatabase</strong> <span class="doc-loc">line 211</span></div><pre class="doc-text">Mimics a pymongo Database; collections are created on first access.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Accept real 24-hex ObjectId strings or our own format</div></div><div class="doc-card section-card"><div class="doc-kind">§ Write</div></div><div class="doc-card section-card"><div class="doc-kind">§ Read</div></div><div class="doc-card section-card"><div class="doc-kind">§ Aggregation (subset used by admin dashboard)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Helpers</div></div><div class="doc-card section-card"><div class="doc-kind">§ Compare by string representation to handle ObjectId vs str</div></div><div class="doc-card section-card"><div class="doc-kind">§ Resolve group key</div></div><div class="doc-card section-card"><div class="doc-kind">§ Module-level singleton (shared across all requests)</div></div></div></section><section id="web_models" class="dir-section"><h2 class="dir-title">Web — Models<span class="dir-sub"> — src/web/models/</span></h2><div class="file-block"><div class="file-header"><code>src/web/models/__init__.py</code></div><div class="doc-card section-card"><div class="doc-kind">§ Models package</div></div></div><div class="file-block"><div class="file-header"><code>src/web/models/user.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">User Model
+==========
+A thin proxy object that wraps a raw MongoDB document and satisfies
+the Flask-Login UserMixin interface.  No ORM layer is used; we keep
+the model intentionally simple to stay close to the MongoDB document.</pre></div><div class="doc-card class-card"><div class="doc-sig">class <strong>UserProxy</strong> <span class="doc-loc">line 12</span></div><pre class="doc-text">Wraps a MongoDB user document for Flask-Login compatibility.
+
+MongoDB document schema (collection: users):
+{
+    "_id":          ObjectId,
+    "username":     str,
+    "email":        str,
+    "password":     str,          # werkzeug password hash
+    "role":         "user"|"admin",
+    "created_at":   datetime,
+    "search_count": int
+}</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Flask-Login requires a string ID</div></div></div></section><section id="web_routes" class="dir-section"><h2 class="dir-title">Web — Routes<span class="dir-sub"> — src/web/routes/</span></h2><div class="file-block"><div class="file-header"><code>src/web/routes/__init__.py</code></div><div class="doc-card section-card"><div class="doc-kind">§ Routes package</div></div></div><div class="file-block"><div class="file-header"><code>src/web/routes/auth.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Authentication Blueprint
+=========================
+Handles user registration, login, and logout.
+Passwords are hashed with Werkzeug's PBKDF2-SHA256 implementation.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Register</div></div><div class="doc-card section-card"><div class="doc-kind">§ Validation</div></div><div class="doc-card section-card"><div class="doc-kind">§ Create user</div></div><div class="doc-card section-card"><div class="doc-kind">§ Login</div></div><div class="doc-card section-card"><div class="doc-kind">§ Logout</div></div></div><div class="file-block"><div class="file-header"><code>src/web/routes/search.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Search Blueprint
+================
+Core search functionality: file upload, text input, algorithm selection,
+result display, history, and the comparison benchmark mode.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_save_to_history</strong> <span class="doc-loc">line 223</span></div><pre class=doc-text>Persist search metadata to MongoDB and return the search _id string.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>compare</strong> <span class="doc-loc">line 361</span></div><pre class=doc-text>Run all three algorithms on the submitted text and return JSON metrics.
+Called by the Compare button on the results page via fetch().</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_safe_extract_zip</strong> <span class="doc-loc">line 481</span></div><pre class=doc-text>Extract text files from a ZIP, guarding against zip-slip and size bombs.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_calc_streak</strong> <span class="doc-loc">line 535</span></div><pre class=doc-text>Return the current consecutive-day streak from a desc-sorted list of YYYY-MM-DD strings.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>_normalize_algo</strong> <span class="doc-loc">line 592</span></div><pre class=doc-text>Return the canonical APME display name for any stored algorithm value.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Helpers</div></div><div class="doc-card section-card"><div class="doc-kind">§ Increment per-user counter</div></div><div class="doc-card section-card"><div class="doc-kind">§ Detailed performance log (for admin analytics)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Routes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Stringify ObjectIds for Jinja2</div></div><div class="doc-card section-card"><div class="doc-kind">§ Internal enum values</div></div><div class="doc-card section-card"><div class="doc-kind">§ Old classic display names (stored before APME renaming)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Total searches + avg pattern length</div></div><div class="doc-card section-card"><div class="doc-kind">§ 7-day activity (fill missing days with 0)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Input method split</div></div><div class="doc-card section-card"><div class="doc-kind">§ Activity streak</div></div></div><div class="file-block"><div class="file-header"><code>src/web/routes/admin.py</code></div><div class="doc-card module-card"><div class="doc-kind">Module Docstring</div><pre class="doc-text">Admin Blueprint
+===============
+Accessible only to users with role == "admin".
+Provides a global analytics dashboard and user management.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>admin_required</strong> <span class="doc-loc">line 32</span></div><pre class=doc-text>Restrict a route to authenticated admin users.</pre></div><div class="doc-card func-card"><div class="doc-sig">Function <strong>promote</strong> <span class="doc-loc">line 114</span></div><pre class=doc-text>Promote a user to admin role.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Decorator</div></div><div class="doc-card section-card"><div class="doc-kind">§ Routes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Summary counts</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm usage distribution</div></div><div class="doc-card section-card"><div class="doc-kind">§ Per-algorithm performance averages</div></div><div class="doc-card section-card"><div class="doc-kind">§ Round for display and attach human-readable name</div></div><div class="doc-card section-card"><div class="doc-kind">§ Recent 20 searches across all users</div></div><div class="doc-card section-card"><div class="doc-kind">§ Top users by search count</div></div></div></section><section id="web_static" class="dir-section"><h2 class="dir-title">Web — Static Assets<span class="dir-sub"> — src/web/static/</span></h2><div class="file-block"><div class="file-header"><code>src/web/static/js/app.js</code></div><div class="doc-card header-card"><div class="doc-kind">File Header</div><pre class="doc-text">APME – Global JavaScript
+Provides shared utilities used across all pages.</pre></div><div class="doc-card section-card"><div class="doc-kind">§ Bootstrap tooltip initialisation</div></div><div class="doc-card section-card"><div class="doc-kind">§ Utility: format bytes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Utility: escape HTML</div></div></div></section><section id="web_templates" class="dir-section"><h2 class="dir-title">Web — Templates<span class="dir-sub"> — src/web/templates/</span></h2><div class="file-block"><div class="file-header"><code>src/web/templates/base.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Bootstrap 5</div></div><div class="doc-card section-card"><div class="doc-kind">§ Bootstrap Icons</div></div><div class="doc-card section-card"><div class="doc-kind">§ Chart.js</div></div><div class="doc-card section-card"><div class="doc-kind">§ Custom styles</div></div><div class="doc-card section-card"><div class="doc-kind">§ Navbar ────────────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Logo + Wordmark</div></div><div class="doc-card section-card"><div class="doc-kind">§ APME inline SVG logo: magnifying glass with pattern-match nodes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Lens outer ring</div></div><div class="doc-card section-card"><div class="doc-kind">§ Lens subtle fill</div></div><div class="doc-card section-card"><div class="doc-kind">§ Text line 1</div></div><div class="doc-card section-card"><div class="doc-kind">§ Text line 2 — dimmed (behind match highlight)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Match highlight rect</div></div><div class="doc-card section-card"><div class="doc-kind">§ Pattern-match nodes (blue)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Connector between nodes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Text line 3 (slightly shorter)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Handle</div></div><div class="doc-card section-card"><div class="doc-kind">§ Flash messages ─────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Main content ───────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Footer ─────────────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Brand</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm list</div></div><div class="doc-card section-card"><div class="doc-kind">§ Links</div></div><div class="doc-card section-card"><div class="doc-kind">§ Bootstrap JS</div></div><div class="doc-card section-card"><div class="doc-kind">§ Custom JS</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/landing.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Hero ══════════════════════════════════════════════════════════════</div></div><div class="doc-card section-card"><div class="doc-kind">§ Left: copy + CTA</div></div><div class="doc-card section-card"><div class="doc-kind">§ Right: scan animation block</div></div><div class="doc-card section-card"><div class="doc-kind">§ Animated scan beam</div></div><div class="doc-card section-card"><div class="doc-kind">§ Code lines with match highlights</div></div><div class="doc-card section-card"><div class="doc-kind">§ Stats strip</div></div><div class="doc-card section-card"><div class="doc-kind">§ Info Tabs ══════════════════════════════════════════════════════════</div></div><div class="doc-card section-card"><div class="doc-kind">§ Tab nav</div></div><div class="doc-card section-card"><div class="doc-kind">§ Tab panes</div></div><div class="doc-card section-card"><div class="doc-kind">§ About APME</div></div><div class="doc-card section-card"><div class="doc-kind">§ Auto-Selection</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm List</div></div><div class="doc-card section-card"><div class="doc-kind">§ Performance Charts</div></div><div class="doc-card section-card"><div class="doc-kind">§ CTA Strip ══════════════════════════════════════════════════════════</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/login.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Logo mark</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/register.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Logo mark</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/dashboard.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Welcome hero ────────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Action cards grid ───────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Search Engine — primary</div></div><div class="doc-card section-card"><div class="doc-kind">§ Search History</div></div><div class="doc-card section-card"><div class="doc-kind">§ Statistics</div></div><div class="doc-card section-card"><div class="doc-kind">§ Admin Dashboard</div></div><div class="doc-card section-card"><div class="doc-kind">§ Batch Search shortcut</div></div><div class="doc-card section-card"><div class="doc-kind">§ Account / Logout</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm quick-reference ───────────────────────────────────────────</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/index.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Hero ───────────────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Search form ───────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Input mode tabs</div></div><div class="doc-card section-card"><div class="doc-kind">§ Text pane</div></div><div class="doc-card section-card"><div class="doc-kind">§ File pane</div></div><div class="doc-card section-card"><div class="doc-kind">§ Batch pane</div></div><div class="doc-card section-card"><div class="doc-kind">§ Pattern + mode + algorithm row</div></div><div class="doc-card section-card"><div class="doc-kind">§ Pattern</div></div><div class="doc-card section-card"><div class="doc-kind">§ Mode</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm picker (manual only)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Max errors (FuzzySearch only)</div></div><div class="doc-card section-card"><div class="doc-kind">§ Inline error box</div></div><div class="doc-card section-card"><div class="doc-kind">§ Submit</div></div><div class="doc-card section-card"><div class="doc-kind">§ Skeleton loader ────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm reference cards ───────────────────────────────────────</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/results.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Summary bar ─────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Warnings ────────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Metric cards ─────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm</div></div><div class="doc-card section-card"><div class="doc-kind">§ Time</div></div><div class="doc-card section-card"><div class="doc-kind">§ Text size</div></div><div class="doc-card section-card"><div class="doc-kind">§ Matches</div></div><div class="doc-card section-card"><div class="doc-kind">§ Selection reasoning ──────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm Comparison ─────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Match list ───────────────────────────────────────────────────────</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/batch_results.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Summary bar ─────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Metric cards ─────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Per-file breakdown ───────────────────────────────────────────────</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/statistics.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ KPI cards</div></div><div class="doc-card section-card"><div class="doc-kind">§ Charts</div></div><div class="doc-card section-card"><div class="doc-kind">§ Algorithm distribution</div></div><div class="doc-card section-card"><div class="doc-kind">§ 7-day activity</div></div><div class="doc-card section-card"><div class="doc-kind">§ Input method split</div></div><div class="doc-card section-card"><div class="doc-kind">§ Empty state (shown when no data)</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/algorithm_detail.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Breadcrumb ──────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Hero card ───────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ How it works + Notes ────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Steps</div></div><div class="doc-card section-card"><div class="doc-kind">§ Notes</div></div><div class="doc-card section-card"><div class="doc-kind">§ Complexity table ─────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ All algorithms nav ───────────────────────────────────────────────</div></div></div><div class="file-block"><div class="file-header"><code>src/web/templates/admin/dashboard.html</code></div><div class="doc-card section-card"><div class="doc-kind">§ Summary cards ────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Charts ───────────────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Performance table ────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Recent searches ──────────────────────────────────────────────────</div></div><div class="doc-card section-card"><div class="doc-kind">§ Top users ────────────────────────────────────────────────────────</div></div></div></section>
+  </main>
+</div>
+</body>
+</html>
